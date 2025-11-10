@@ -4,7 +4,7 @@
 
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import type { RootState } from '@/store';
-import type { Security, PriceData, Timeframe } from '@/types';
+import type { Security, PriceData, Timeframe, DataCompleteness } from '@/types';
 import * as securitiesApi from '@/services/securities';
 import { getTimeframeRange } from '@/utils/timeframes';
 
@@ -18,6 +18,14 @@ interface SecuritiesState {
   isLoadingPrices: boolean;
   isSyncing: boolean;
   error: string | null;
+  // NEW: Price data metadata
+  priceMetadata: {
+    requestedStart: string | null;
+    requestedEnd: string | null;
+    actualStart: string | null;
+    actualEnd: string | null;
+    dataCompleteness: DataCompleteness | null;
+  };
 }
 
 const initialState: SecuritiesState = {
@@ -30,6 +38,13 @@ const initialState: SecuritiesState = {
   isLoadingPrices: false,
   isSyncing: false,
   error: null,
+  priceMetadata: {
+    requestedStart: null,
+    requestedEnd: null,
+    actualStart: null,
+    actualEnd: null,
+    dataCompleteness: null,
+  },
 };
 
 // Async thunks
@@ -80,7 +95,18 @@ export const fetchPricesAsync = createAsyncThunk(
       end.toISOString(),
       interval
     );
-    return { prices: response.prices, timeframe };
+    return {
+      prices: response.prices,
+      timeframe,
+      // NEW: Include metadata from API response
+      metadata: {
+        requestedStart: response.requested_start,
+        requestedEnd: response.requested_end,
+        actualStart: response.actual_start,
+        actualEnd: response.actual_end,
+        dataCompleteness: response.data_completeness,
+      },
+    };
   }
 );
 
@@ -156,6 +182,8 @@ const securitiesSlice = createSlice({
         state.isLoadingPrices = false;
         state.prices = action.payload.prices;
         state.currentTimeframe = action.payload.timeframe;
+        // NEW: Store metadata
+        state.priceMetadata = action.payload.metadata;
       })
       .addCase(fetchPricesAsync.rejected, (state, action) => {
         state.isLoadingPrices = false;
@@ -189,5 +217,8 @@ export const selectIsLoading = (state: RootState) =>
   state.securities.isLoadingSecurity ||
   state.securities.isLoadingPrices ||
   state.securities.isSyncing;
+// NEW: Selector for price metadata
+export const selectPriceMetadata = (state: RootState) =>
+  state.securities.priceMetadata;
 
 export default securitiesSlice.reducer;

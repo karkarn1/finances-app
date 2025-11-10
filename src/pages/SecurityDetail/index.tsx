@@ -29,6 +29,7 @@ import {
   selectIsLoadingPrices,
   selectIsSyncing,
   selectError,
+  selectPriceMetadata,
 } from '@/store/slices/securitiesSlice';
 import PriceChart from '@/components/PriceChart';
 import { formatMarketCap, formatDateTime } from '@/utils/timeframes';
@@ -48,6 +49,7 @@ const SecurityDetail: FC = () => {
   const isLoadingPrices = useAppSelector(selectIsLoadingPrices);
   const isSyncing = useAppSelector(selectIsSyncing);
   const error = useAppSelector(selectError);
+  const priceMetadata = useAppSelector(selectPriceMetadata);
 
   const [selectedTimeframe, setSelectedTimeframe] = useState<Timeframe>('1M');
 
@@ -189,6 +191,11 @@ const SecurityDetail: FC = () => {
           data={prices}
           timeframe={currentTimeframe}
           isLoading={isLoadingPrices}
+          dataCompleteness={priceMetadata.dataCompleteness}
+          actualStart={priceMetadata.actualStart}
+          actualEnd={priceMetadata.actualEnd}
+          requestedStart={priceMetadata.requestedStart}
+          requestedEnd={priceMetadata.requestedEnd}
         />
       </Box>
 

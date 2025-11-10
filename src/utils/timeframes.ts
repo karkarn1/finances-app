@@ -57,12 +57,12 @@ export const getTimeframeRange = (timeframe: Timeframe): TimeframeRange => {
     case '5Y':
       start = new Date(end);
       start.setFullYear(start.getFullYear() - 5);
-      interval = '1wk';
+      interval = '1d';
       break;
 
     case 'ALL':
       start = new Date(0); // Unix epoch
-      interval = '1wk';
+      interval = '1d';
       break;
 
     default:

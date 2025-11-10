@@ -12,10 +12,14 @@ import {
   TextField,
   Grid,
   Paper,
+  Chip,
+  Tooltip,
 } from '@mui/material';
+import { InfoOutlined } from '@mui/icons-material';
 import { useAppDispatch, useAppSelector } from '@/hooks';
 import {
   searchSecuritiesAsync,
+  syncSecurityAsync,
   selectSearchResults,
   selectIsSearching,
 } from '@/store/slices/securitiesSlice';
@@ -75,6 +79,10 @@ const Securities: FC = () => {
     value: Security | null
   ) => {
     if (value) {
+      // Auto-sync if security is not in database (fire and forget - don't wait)
+      if (value.in_database === false) {
+        void dispatch(syncSecurityAsync(value.symbol));
+      }
       navigate(`/securities/${value.symbol}`);
     }
   };
@@ -111,6 +119,35 @@ const Securities: FC = () => {
               : 'No securities found'
           }
           data-testid="security-search"
+          renderOption={(props, option: Security) => (
+            <Box
+              component="li"
+              {...props}
+              key={option.symbol}
+              sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}
+            >
+              <Box>
+                <Typography variant="body1" component="span" sx={{ fontWeight: 500 }}>
+                  {option.symbol}
+                </Typography>
+                <Typography variant="body2" component="span" sx={{ ml: 1, color: 'text.secondary' }}>
+                  {option.name}
+                </Typography>
+              </Box>
+              {option.in_database === false && (
+                <Tooltip title="This security is not yet synced to the database. Click to view and sync.">
+                  <Chip
+                    icon={<InfoOutlined fontSize="small" />}
+                    label="Not Synced"
+                    size="small"
+                    color="warning"
+                    variant="outlined"
+                    data-testid={`not-synced-badge-${option.symbol}`}
+                  />
+                </Tooltip>
+              )}
+            </Box>
+          )}
           renderInput={(params) => (
             <TextField
               // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -85,6 +85,7 @@ export interface Security {
   is_syncing: boolean;
   created_at: string;
   updated_at: string;
+  in_database?: boolean; // NEW: Indicates if security exists in database (optional for backward compatibility)
 }
 
 export interface PriceData {
@@ -96,11 +97,19 @@ export interface PriceData {
   volume: number;
 }
 
+export type DataCompleteness = 'complete' | 'partial' | 'sparse' | 'empty';
+
 export interface SecurityPricesResponse {
   security: Security;
   prices: PriceData[];
   interval_type: string;
   count: number;
+  // NEW: Metadata fields for data quality information
+  requested_start: string | null;
+  requested_end: string | null;
+  actual_start: string | null;
+  actual_end: string | null;
+  data_completeness: DataCompleteness;
 }
 
 export interface SyncResponse {
