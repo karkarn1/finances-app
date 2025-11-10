@@ -47,7 +47,7 @@ Tests authentication with username/email and comprehensive validation:
 - ✅ **Loading State:** Display spinner during authentication
 
 **Key Features:**
-- Uses existing test user (a@gmail.com / pass)
+- Uses existing test user (testuser / test@example.com / testpasswd)
 - Tests both username and email as valid login identifiers
 - Verifies localStorage token persistence
 - Tests Material-UI CircularProgress loading indicator
@@ -138,9 +138,9 @@ Tests seamless navigation across all authentication pages:
 ### Test User (Existing)
 ```typescript
 // From e2e/fixtures/test-user.ts
-email: 'a@gmail.com'
-username: 'alexj'
-password: 'pass'
+email: 'test@example.com'
+username: 'testuser'
+password: 'testpasswd'
 ```
 
 ### Generated Test Users (New Registration)
@@ -217,7 +217,7 @@ await page.evaluate(() => localStorage.clear())
 
 ### Backend Requirements
 - Backend API running at `http://localhost:8000`
-- Database with test user (a@gmail.com / pass)
+- Database with test user (testuser / test@example.com / testpasswd)
 - CORS configured to allow localhost:3000 and localhost:5173
 - Auth endpoints functional:
   - POST /api/v1/auth/login
@@ -305,7 +305,7 @@ Solution: Kill process or change port in playwright.config.ts
 **Test User Doesn't Exist:**
 ```
 Error: Invalid credentials
-Solution: Create test user a@gmail.com with password 'pass'
+Solution: Create test user testuser/test@example.com with password 'testpasswd'
 ```
 
 **Duplicate Registration Failures:**

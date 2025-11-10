@@ -22,7 +22,7 @@ yarn test:e2e:headed e2e/securities.spec.ts
 ## Prerequisites
 
 1. Backend running: `cd finances-api && make start`
-2. Test user: `a@gmail.com` / `pass`
+2. Test user: Username `testuser`, Email `test@example.com`, Password `testpasswd`
 3. Frontend: Auto-starts (or `yarn dev`)
 
 ## Test Suites (29 tests)

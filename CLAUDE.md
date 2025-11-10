@@ -150,7 +150,7 @@ await nav.navigateToDashboard();
 ```
 
 **Test Data:**
-- Test user: `a@gmail.com` / `pass`
+- Test user: `testuser` / `test@example.com` / `testpasswd`
 - Expected values defined in `fixtures/test-user.ts`
 - Consistent data across all test suites
 

@@ -96,7 +96,7 @@ make start
 
 ### Frontend Requirements
 - Frontend dev server must be running at `http://localhost:3000`
-- Test user must exist: `a@gmail.com` / `pass`
+- Test user must exist: Username `testuser`, Email `test@example.com`, Password `testpasswd`
 
 The Playwright config will automatically start the dev server if not running.
 
@@ -303,7 +303,7 @@ finances-app/
 **Problem**: Tests fail at login step
 
 **Solution**:
-- Verify test user exists: `a@gmail.com` / `pass`
+- Verify test user exists: Username `testuser`, Email `test@example.com`, Password `testpasswd`
 - Check backend auth endpoints
 - Verify JWT token generation works
 - Check for CORS issues

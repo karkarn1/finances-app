@@ -3,10 +3,10 @@
  */
 
 export const testUser = {
-  email: 'a@gmail.com',
-  password: 'pass',
+  email: 'test@example.com',
+  password: 'testpasswd',
   name: 'Alex Johnson',
-  username: 'alexj',
+  username: 'testuser',
 };
 
 export const expectedData = {

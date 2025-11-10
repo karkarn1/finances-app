@@ -10,8 +10,9 @@ make start
 ```
 
 **Test user must exist:**
-- Email: `a@gmail.com`
-- Password: `pass`
+- Username: `testuser`
+- Email: `test@example.com`
+- Password: `testpasswd`
 
 ## Run Tests
 
@@ -122,7 +123,7 @@ Fix: cd finances-api && make start
 ### Test User Doesn't Exist
 ```
 Error: Invalid credentials (in login tests)
-Fix: Create user a@gmail.com with password 'pass'
+Fix: Create user testuser/test@example.com with password 'testpasswd'
 ```
 
 ### Port Already in Use

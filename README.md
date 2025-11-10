@@ -65,8 +65,9 @@ The application will open at [http://localhost:5173](http://localhost:5173)
 
 ### Test Credentials
 ```
-Email: a@gmail.com
-Password: pass
+Username: testuser
+Email: test@example.com
+Password: testpasswd
 ```
 
 ## 📸 Screenshots
