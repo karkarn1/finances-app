@@ -110,8 +110,9 @@ const CurrencyDetail: FC = () => {
   };
 
   // Format exchange rate with proper decimals
-  const formatRate = (rate: number): string => {
-    return rate.toFixed(6);
+  const formatRate = (rate: number | string): string => {
+    const numRate = typeof rate === 'string' ? parseFloat(rate) : rate;
+    return Number.isFinite(numRate) ? numRate.toFixed(6) : '0.000000';
   };
 
   // Get target currency details

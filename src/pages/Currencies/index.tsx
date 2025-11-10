@@ -241,9 +241,11 @@ const Currencies: FC = () => {
         </Box>
         <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
           <Tooltip title="Refresh currencies list">
-            <IconButton onClick={handleRefresh} disabled={loading} data-testid="refresh-button">
-              <RefreshIcon />
-            </IconButton>
+            <span>
+              <IconButton onClick={handleRefresh} disabled={loading} data-testid="refresh-button">
+                <RefreshIcon />
+              </IconButton>
+            </span>
           </Tooltip>
           <Button
             variant="outlined"
