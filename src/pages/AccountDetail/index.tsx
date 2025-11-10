@@ -118,6 +118,7 @@ const AccountDetail: FC = () => {
 
   const [holdingFormData, setHoldingFormData] = useState<HoldingCreate>({
     security_id: '',
+    timestamp: new Date().toISOString(),
     shares: 0,
     average_price_per_share: 0,
   });
@@ -276,6 +277,7 @@ const AccountDetail: FC = () => {
       setEditingHolding(null);
       setHoldingFormData({
         security_id: '',
+        timestamp: new Date().toISOString(),
         shares: 0,
         average_price_per_share: 0,
       });
@@ -290,6 +292,7 @@ const AccountDetail: FC = () => {
     setEditingHolding(null);
     setHoldingFormData({
       security_id: '',
+      timestamp: new Date().toISOString(),
       shares: 0,
       average_price_per_share: 0,
     });
@@ -587,6 +590,7 @@ const AccountDetail: FC = () => {
                     <TableHead>
                       <TableRow>
                         <TableCell>Security</TableCell>
+                        <TableCell>Date</TableCell>
                         <TableCell align="right">Shares</TableCell>
                         <TableCell align="right">Avg Price</TableCell>
                         <TableCell align="right">Market Value</TableCell>
@@ -594,7 +598,10 @@ const AccountDetail: FC = () => {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {holdings.map((holding) => (
+                      {holdings
+                        .slice()
+                        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+                        .map((holding) => (
                         <TableRow key={holding.id}>
                           <TableCell>
                             <Typography variant="body2" fontWeight="medium">
@@ -602,6 +609,11 @@ const AccountDetail: FC = () => {
                             </Typography>
                             <Typography variant="caption" color="text.secondary">
                               {holding.security?.name || '—'}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2">
+                              {formatDateShort(holding.timestamp)}
                             </Typography>
                           </TableCell>
                           <TableCell align="right">
@@ -637,7 +649,7 @@ const AccountDetail: FC = () => {
                         </TableRow>
                       ))}
                       <TableRow>
-                        <TableCell colSpan={3}>
+                        <TableCell colSpan={4}>
                           <Typography variant="body1" fontWeight="bold">
                             Total
                           </Typography>
@@ -753,6 +765,25 @@ const AccountDetail: FC = () => {
         <DialogTitle>{editingHolding ? 'Edit Holding' : 'Add Holding'}</DialogTitle>
         <DialogContent>
           <Box sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <TextField
+              label="Holding Date"
+              type="datetime-local"
+              value={
+                holdingFormData.timestamp
+                  ? new Date(holdingFormData.timestamp).toISOString().slice(0, 16)
+                  : new Date().toISOString().slice(0, 16)
+              }
+              onChange={(e) =>
+                setHoldingFormData({
+                  ...holdingFormData,
+                  timestamp: new Date(e.target.value).toISOString(),
+                })
+              }
+              fullWidth
+              InputLabelProps={{ shrink: true }}
+              helperText="The date when this holding was recorded"
+              data-testid="holding-date-input"
+            />
             <TextField
               label="Security"
               value={securitySearchQuery}

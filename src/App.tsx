@@ -12,6 +12,7 @@ import SecurityDetail from './pages/SecurityDetail';
 import FinancialInstitutions from './pages/FinancialInstitutions';
 import Accounts from './pages/Accounts';
 import AccountDetail from './pages/AccountDetail';
+import Currencies from './pages/Currencies';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import { useAppSelector } from '@/hooks';
@@ -78,6 +79,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <AccountDetail />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/currencies"
+                element={
+                  <ProtectedRoute>
+                    <Currencies />
                   </ProtectedRoute>
                 }
               />

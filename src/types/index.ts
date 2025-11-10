@@ -156,12 +156,14 @@ export interface AccountDetailed {
   account_type: AccountType;
   is_investment_account: boolean;
   interest_rate?: number;
+  currency_id?: string;
   created_at: string;
   updated_at: string;
   // Computed fields from backend
   current_balance?: number;
   current_cash_balance?: number;
   financial_institution?: FinancialInstitution;
+  currency?: Currency;
 }
 
 export interface AccountCreate {
@@ -170,6 +172,7 @@ export interface AccountCreate {
   financial_institution_id?: string;
   is_investment_account?: boolean;
   interest_rate?: number;
+  currency_id?: string;
 }
 
 export interface AccountUpdate {
@@ -178,6 +181,7 @@ export interface AccountUpdate {
   financial_institution_id?: string;
   is_investment_account?: boolean;
   interest_rate?: number;
+  currency_id?: string;
 }
 
 // Account Value (Balance History) types
@@ -230,4 +234,53 @@ export interface HoldingUpdate {
   timestamp?: string;
   shares?: number;
   average_price_per_share?: number;
+}
+
+// Currency types
+export interface Currency {
+  id: string;
+  code: string;
+  name: string;
+  symbol: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CurrencyRate {
+  id: string;
+  fromCurrencyCode: string;
+  toCurrencyCode: string;
+  rate: number;
+  date: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CurrencyRatesResponse {
+  baseCurrency: string;
+  date: string;
+  rates: Record<string, number>;
+  count: number;
+}
+
+export interface SyncRatesResponse {
+  baseCurrency: string;
+  syncedCount: number;
+  failedCount: number;
+  date: string;
+  message: string;
+}
+
+export interface CurrencyCreate {
+  code: string;
+  name: string;
+  symbol: string;
+  isActive?: boolean;
+}
+
+export interface CurrencyUpdate {
+  name?: string;
+  symbol?: string;
+  isActive?: boolean;
 }

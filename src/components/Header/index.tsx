@@ -82,9 +82,17 @@ function Header() {
               color="inherit"
               component={RouterLink}
               to="/securities"
-              sx={{ mr: 2 }}
+              sx={{ mr: 1 }}
             >
               Securities
+            </Button>
+            <Button
+              color="inherit"
+              component={RouterLink}
+              to="/currencies"
+              sx={{ mr: 2 }}
+            >
+              Currencies
             </Button>
             <Typography variant="body2" sx={{ mr: 2 }}>
               {user?.email || user?.username}

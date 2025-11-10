@@ -4,6 +4,7 @@ import securitiesReducer from './slices/securitiesSlice';
 import financialInstitutionsReducer from './slices/financialInstitutionsSlice';
 import accountsReducer from './slices/accountsSlice';
 import holdingsReducer from './slices/holdingsSlice';
+import currenciesReducer from './slices/currenciesSlice';
 
 export const store = configureStore({
   reducer: {
@@ -12,6 +13,7 @@ export const store = configureStore({
     financialInstitutions: financialInstitutionsReducer,
     accounts: accountsReducer,
     holdings: holdingsReducer,
+    currencies: currenciesReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

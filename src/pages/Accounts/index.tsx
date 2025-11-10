@@ -52,8 +52,10 @@ import {
   fetchFinancialInstitutions,
   selectAllInstitutions,
 } from '@/store/slices/financialInstitutionsSlice';
+import { selectAllCurrencies } from '@/store/slices/currenciesSlice';
 import type { AccountDetailed, AccountCreate, AccountType } from '@/types';
 import { formatCurrency, getAccountTypeLabel } from '@/utils';
+import CurrencySelector from '@/components/CurrencySelector';
 
 const ACCOUNT_TYPES: { value: AccountType; label: string }[] = [
   { value: 'checking', label: 'Checking' },
@@ -77,6 +79,7 @@ const Accounts: FC = () => {
   const loading = useAppSelector(selectAccountsLoading);
   const error = useAppSelector(selectAccountsError);
   const institutions = useAppSelector(selectAllInstitutions);
+  const currencies = useAppSelector(selectAllCurrencies);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -118,6 +121,7 @@ const Accounts: FC = () => {
         }),
         is_investment_account: account.is_investment_account,
         ...(account.interest_rate !== undefined && { interest_rate: account.interest_rate }),
+        ...(account.currency_id && { currency_id: account.currency_id }),
       });
     } else {
       setEditingAccount(null);
@@ -180,6 +184,7 @@ const Accounts: FC = () => {
         is_investment_account: formData.is_investment_account,
       }),
       ...(formData.interest_rate !== undefined && { interest_rate: formData.interest_rate }),
+      ...(formData.currency_id && { currency_id: formData.currency_id }),
     };
 
     try {
@@ -260,7 +265,17 @@ const Accounts: FC = () => {
           )}
           {account.current_balance !== undefined && (
             <Typography variant="h5" sx={{ mt: 2 }}>
-              {formatCurrency(account.current_balance)}
+              {formatCurrency(account.current_balance, account.currency?.code)}
+              {account.currency && (
+                <Typography
+                  component="span"
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ ml: 1 }}
+                >
+                  {account.currency.code}
+                </Typography>
+              )}
             </Typography>
           )}
           {account.is_investment_account && (
@@ -468,6 +483,27 @@ const Accounts: FC = () => {
               fullWidth
               inputProps={{ min: 0, max: 100, step: 0.01 }}
               data-testid="interest-rate-input"
+            />
+            <CurrencySelector
+              value={
+                formData.currency_id
+                  ? currencies.find((c) => c.id === formData.currency_id)?.code || null
+                  : null
+              }
+              onChange={(code) => {
+                const newFormData = { ...formData };
+                if (code) {
+                  const currency = currencies.find((c) => c.code === code);
+                  if (currency) {
+                    newFormData.currency_id = currency.id;
+                  }
+                } else {
+                  delete newFormData.currency_id;
+                }
+                setFormData(newFormData);
+              }}
+              label="Currency"
+              helperText="Optional - defaults to USD"
             />
           </Box>
         </DialogContent>
