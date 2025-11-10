@@ -3,6 +3,7 @@
  */
 
 import { FC, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Container,
@@ -53,6 +54,7 @@ import type { CurrencyCreate } from '@/types';
 
 const Currencies: FC = () => {
   const dispatch = useAppDispatch();
+  const navigate = useNavigate();
   const currencies = useAppSelector(selectAllCurrencies);
   const loading = useAppSelector(selectCurrenciesLoading);
   const error = useAppSelector(selectCurrenciesError);
@@ -212,6 +214,11 @@ const Currencies: FC = () => {
     ? currencies.filter((c) => c.isActive)
     : currencies;
 
+  // Handle row click to navigate to currency detail
+  const handleRowClick = (currencyCode: string) => {
+    navigate(`/currencies/${currencyCode}`);
+  };
+
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
       <Box
@@ -314,6 +321,8 @@ const Currencies: FC = () => {
                 <TableRow
                   key={currency.id}
                   hover
+                  onClick={() => handleRowClick(currency.code)}
+                  sx={{ cursor: 'pointer' }}
                   data-testid={`currency-row-${currency.code}`}
                 >
                   <TableCell>
@@ -413,7 +422,7 @@ const Currencies: FC = () => {
             Cancel
           </Button>
           <Button
-            onClick={handleCreateCurrency}
+            onClick={() => { void handleCreateCurrency(); }}
             variant="contained"
             disabled={isCreating}
             data-testid="create-currency-button"
@@ -438,7 +447,7 @@ const Currencies: FC = () => {
         <DialogActions>
           <Button onClick={handleCloseSyncDialog}>Cancel</Button>
           <Button
-            onClick={handleSyncRates}
+            onClick={() => { void handleSyncRates(); }}
             variant="contained"
             disabled={syncStatus.loading}
             data-testid="confirm-sync"

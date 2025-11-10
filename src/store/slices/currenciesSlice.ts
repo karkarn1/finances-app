@@ -10,6 +10,36 @@ import type {
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
 
+// Raw API response types (snake_case from backend)
+interface RawCurrencyResponse {
+  id: string;
+  code: string;
+  name: string;
+  symbol: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+interface RawCurrencyRatesResponse {
+  base_currency: string;
+  date: string;
+  rates: Record<string, number>;
+  count: number;
+}
+
+interface RawSyncRatesResponse {
+  base_currency: string;
+  synced_count: number;
+  failed_count: number;
+  date: string;
+  message: string;
+}
+
+interface ApiErrorResponse {
+  detail: string;
+}
+
 interface CurrenciesState {
   currencies: Currency[];
   currentRates: CurrencyRatesResponse | null;
@@ -35,15 +65,15 @@ const initialState: CurrenciesState = {
 };
 
 // Helper function to convert snake_case to camelCase
-function toCamelCase(obj: Record<string, unknown>): Currency {
+function toCamelCase(obj: RawCurrencyResponse): Currency {
   return {
-    id: obj['id'] as string,
-    code: obj['code'] as string,
-    name: obj['name'] as string,
-    symbol: obj['symbol'] as string,
-    isActive: obj['is_active'] as boolean,
-    createdAt: obj['created_at'] as string,
-    updatedAt: obj['updated_at'] as string,
+    id: obj.id,
+    code: obj.code,
+    name: obj.name,
+    symbol: obj.symbol,
+    isActive: obj.is_active,
+    createdAt: obj.created_at,
+    updatedAt: obj.updated_at,
   };
 }
 
@@ -71,11 +101,11 @@ export const fetchCurrencies = createAsyncThunk<
     });
 
     if (!response.ok) {
-      const error = await response.json();
+      const error = (await response.json()) as ApiErrorResponse;
       return rejectWithValue(error.detail || 'Failed to fetch currencies');
     }
 
-    const data = await response.json();
+    const data = (await response.json()) as RawCurrencyResponse[];
     return data.map(toCamelCase);
   } catch (error) {
     return rejectWithValue(
@@ -100,11 +130,11 @@ export const fetchCurrencyRates = createAsyncThunk<
     });
 
     if (!response.ok) {
-      const error = await response.json();
+      const error = (await response.json()) as ApiErrorResponse;
       return rejectWithValue(error.detail || 'Failed to fetch currency rates');
     }
 
-    const data = await response.json();
+    const data = (await response.json()) as RawCurrencyRatesResponse;
     return {
       baseCurrency: data.base_currency,
       date: data.date,
@@ -140,11 +170,11 @@ export const syncCurrencyRates = createAsyncThunk<
       });
 
       if (!response.ok) {
-        const error = await response.json();
+        const error = (await response.json()) as ApiErrorResponse;
         return rejectWithValue(error.detail || 'Failed to sync currency rates');
       }
 
-      const data = await response.json();
+      const data = (await response.json()) as RawSyncRatesResponse;
       return {
         baseCurrency: data.base_currency,
         syncedCount: data.synced_count,
@@ -178,11 +208,11 @@ export const createCurrency = createAsyncThunk<
     });
 
     if (!response.ok) {
-      const error = await response.json();
+      const error = (await response.json()) as ApiErrorResponse;
       return rejectWithValue(error.detail || 'Failed to create currency');
     }
 
-    const data = await response.json();
+    const data = (await response.json()) as RawCurrencyResponse;
     return toCamelCase(data);
   } catch (error) {
     return rejectWithValue(
@@ -209,11 +239,11 @@ export const updateCurrency = createAsyncThunk<
     });
 
     if (!response.ok) {
-      const error = await response.json();
+      const error = (await response.json()) as ApiErrorResponse;
       return rejectWithValue(error.detail || 'Failed to update currency');
     }
 
-    const responseData = await response.json();
+    const responseData = (await response.json()) as RawCurrencyResponse;
     return toCamelCase(responseData);
   } catch (error) {
     return rejectWithValue(
