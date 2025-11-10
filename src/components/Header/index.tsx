@@ -65,6 +65,22 @@ function Header() {
             <Button
               color="inherit"
               component={RouterLink}
+              to="/accounts"
+              sx={{ mr: 1 }}
+            >
+              Accounts
+            </Button>
+            <Button
+              color="inherit"
+              component={RouterLink}
+              to="/financial-institutions"
+              sx={{ mr: 1 }}
+            >
+              Institutions
+            </Button>
+            <Button
+              color="inherit"
+              component={RouterLink}
               to="/securities"
               sx={{ mr: 2 }}
             >

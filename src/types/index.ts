@@ -119,3 +119,115 @@ export interface SyncResponse {
 }
 
 export type Timeframe = '1D' | '1W' | '1M' | '6M' | 'YTD' | '1Y' | '5Y' | 'ALL';
+
+// Financial Institution types
+export interface FinancialInstitution {
+  id: string;
+  name: string;
+  url?: string;
+  user_id: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FinancialInstitutionCreate {
+  name: string;
+  url?: string;
+}
+
+// Enhanced Account types with full backend integration
+export type AccountType =
+  | 'checking'
+  | 'savings'
+  | 'tfsa'
+  | 'rrsp'
+  | 'fhsa'
+  | 'margin'
+  | 'credit_card'
+  | 'line_of_credit'
+  | 'payment_plan'
+  | 'mortgage';
+
+export interface AccountDetailed {
+  id: string;
+  user_id: number;
+  financial_institution_id?: string;
+  name: string;
+  account_type: AccountType;
+  is_investment_account: boolean;
+  interest_rate?: number;
+  created_at: string;
+  updated_at: string;
+  // Computed fields from backend
+  current_balance?: number;
+  current_cash_balance?: number;
+  financial_institution?: FinancialInstitution;
+}
+
+export interface AccountCreate {
+  name: string;
+  account_type: AccountType;
+  financial_institution_id?: string;
+  is_investment_account?: boolean;
+  interest_rate?: number;
+}
+
+export interface AccountUpdate {
+  name?: string;
+  account_type?: AccountType;
+  financial_institution_id?: string;
+  is_investment_account?: boolean;
+  interest_rate?: number;
+}
+
+// Account Value (Balance History) types
+export interface AccountValue {
+  id: string;
+  account_id: string;
+  timestamp: string;
+  balance: number;
+  cash_balance?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AccountValueCreate {
+  timestamp?: string; // Defaults to now if not provided
+  balance: number;
+  cash_balance?: number;
+}
+
+export interface AccountValueUpdate {
+  timestamp?: string;
+  balance?: number;
+  cash_balance?: number;
+}
+
+// Holdings types
+export interface Holding {
+  id: string;
+  account_id: string;
+  security_id: string;
+  timestamp: string;
+  shares: number;
+  average_price_per_share: number;
+  created_at: string;
+  updated_at: string;
+  // Populated from backend
+  security?: Security;
+  market_value?: number;
+}
+
+export interface HoldingCreate {
+  security_id: string;
+  timestamp?: string; // Defaults to now if not provided
+  shares: number;
+  average_price_per_share: number;
+}
+
+export interface HoldingUpdate {
+  security_id?: string;
+  timestamp?: string;
+  shares?: number;
+  average_price_per_share?: number;
+}

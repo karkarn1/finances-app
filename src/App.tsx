@@ -9,6 +9,9 @@ import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import Securities from './pages/Securities';
 import SecurityDetail from './pages/SecurityDetail';
+import FinancialInstitutions from './pages/FinancialInstitutions';
+import Accounts from './pages/Accounts';
+import AccountDetail from './pages/AccountDetail';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import { useAppSelector } from '@/hooks';
@@ -51,6 +54,30 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <SecurityDetail />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/financial-institutions"
+                element={
+                  <ProtectedRoute>
+                    <FinancialInstitutions />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/accounts"
+                element={
+                  <ProtectedRoute>
+                    <Accounts />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/accounts/:id"
+                element={
+                  <ProtectedRoute>
+                    <AccountDetail />
                   </ProtectedRoute>
                 }
               />
