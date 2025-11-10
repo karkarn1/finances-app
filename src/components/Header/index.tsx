@@ -54,6 +54,22 @@ function Header() {
 
         {isAuthenticated ? (
           <>
+            <Button
+              color="inherit"
+              component={RouterLink}
+              to="/dashboard"
+              sx={{ mr: 1 }}
+            >
+              Dashboard
+            </Button>
+            <Button
+              color="inherit"
+              component={RouterLink}
+              to="/securities"
+              sx={{ mr: 2 }}
+            >
+              Securities
+            </Button>
             <Typography variant="body2" sx={{ mr: 2 }}>
               {user?.email || user?.username}
             </Typography>

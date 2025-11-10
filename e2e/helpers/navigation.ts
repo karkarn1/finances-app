@@ -56,4 +56,9 @@ export class NavigationHelper {
     await this.page.click('button:has-text("Settings")');
     await this.page.waitForSelector('h2:has-text("Settings")');
   }
+
+  async navigateToSecurities() {
+    await this.page.click('button:has-text("Securities")');
+    await this.page.waitForSelector('h2:has-text("Securities")');
+  }
 }

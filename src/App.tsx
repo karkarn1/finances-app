@@ -7,6 +7,8 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
+import Securities from './pages/Securities';
+import SecurityDetail from './pages/SecurityDetail';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import { useAppSelector } from '@/hooks';
@@ -33,6 +35,22 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <Dashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/securities"
+                element={
+                  <ProtectedRoute>
+                    <Securities />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/securities/:symbol"
+                element={
+                  <ProtectedRoute>
+                    <SecurityDetail />
                   </ProtectedRoute>
                 }
               />
