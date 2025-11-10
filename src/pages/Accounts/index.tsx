@@ -15,7 +15,6 @@ import {
   CardContent,
   CardActions,
   IconButton,
-  Alert,
   CircularProgress,
   Dialog,
   DialogTitle,
@@ -35,7 +34,8 @@ import {
   AccountBalance as AccountBalanceIcon,
   TrendingUp as TrendingUpIcon,
 } from '@mui/icons-material';
-import { useAppDispatch, useAppSelector } from '@/hooks';
+import { useAppDispatch, useAppSelector, useDialog, useFormSubmit } from '@/hooks';
+import { errorService } from '@/services/errorService';
 import {
   fetchAccounts,
   createAccount,
@@ -45,8 +45,6 @@ import {
   selectAssetAccounts,
   selectLiabilityAccounts,
   selectAccountsLoading,
-  selectAccountsError,
-  clearError,
 } from '@/store/slices/accountsSlice';
 import {
   fetchFinancialInstitutions,
@@ -77,43 +75,88 @@ const Accounts: FC = () => {
   const assetAccounts = useAppSelector(selectAssetAccounts);
   const liabilityAccounts = useAppSelector(selectLiabilityAccounts);
   const loading = useAppSelector(selectAccountsLoading);
-  const error = useAppSelector(selectAccountsError);
   const institutions = useAppSelector(selectAllInstitutions);
   const currencies = useAppSelector(selectAllCurrencies);
 
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [editingAccount, setEditingAccount] = useState<AccountDetailed | null>(null);
-  const [deletingAccount, setDeletingAccount] = useState<AccountDetailed | null>(null);
-  const [formData, setFormData] = useState<AccountCreate>({
+  // Initial form data
+  const initialAccountData: AccountCreate = {
     name: '',
     account_type: 'checking',
     is_investment_account: false,
-  });
+  };
+
+  // Dialog management for add/edit account
+  const {
+    open: dialogOpen,
+    data: formData,
+    isEditing,
+    openDialog: openAccountDialog,
+    closeDialog: closeAccountDialog,
+    setData: setFormData,
+  } = useDialog<AccountCreate>(initialAccountData);
+
+  // Track which account is being edited (need ID for update)
+  const [editingAccountId, setEditingAccountId] = useState<string | null>(null);
+
+  // Dialog management for delete confirmation
+  const {
+    open: deleteDialogOpen,
+    data: deletingAccount,
+    openDialog: openDeleteDialog,
+    closeDialog: closeDeleteDialog,
+  } = useDialog<AccountDetailed | null>(null);
+
+  // Form validation errors (not moved to hook as validation is specific to this form)
   const [formErrors, setFormErrors] = useState<{
     name?: string;
     interest_rate?: string;
   }>({});
+
+  // Form submission with loading/error handling
+  const { handleSubmit: submitAccount, isSubmitting } = useFormSubmit(
+    async (data: AccountCreate) => {
+      const submitData: AccountCreate = {
+        name: data.name.trim(),
+        account_type: data.account_type,
+        ...(data.financial_institution_id && {
+          financial_institution_id: data.financial_institution_id,
+        }),
+        ...(data.is_investment_account !== undefined && {
+          is_investment_account: data.is_investment_account,
+        }),
+        ...(data.interest_rate !== undefined && { interest_rate: data.interest_rate }),
+        ...(data.currency_id && { currency_id: data.currency_id }),
+      };
+
+      if (isEditing && editingAccountId) {
+        await dispatch(
+          updateAccount({
+            id: editingAccountId,
+            data: submitData,
+          })
+        ).unwrap();
+        errorService.showSuccess('Account updated successfully');
+      } else {
+        await dispatch(createAccount(submitData)).unwrap();
+        errorService.showSuccess('Account created successfully');
+      }
+    },
+    () => {
+      handleCloseDialog();
+      void dispatch(fetchAccounts());
+    }
+  );
 
   useEffect(() => {
     void dispatch(fetchAccounts());
     void dispatch(fetchFinancialInstitutions());
   }, [dispatch]);
 
-  useEffect(() => {
-    if (error) {
-      const timer = setTimeout(() => {
-        dispatch(clearError());
-      }, 5000);
-      return () => clearTimeout(timer);
-    }
-    return undefined;
-  }, [error, dispatch]);
-
   const handleOpenDialog = (account?: AccountDetailed) => {
     if (account) {
-      setEditingAccount(account);
-      setFormData({
+      // Open dialog with existing account data for editing
+      setEditingAccountId(account.id);
+      openAccountDialog({
         name: account.name,
         account_type: account.account_type,
         ...(account.financial_institution_id && {
@@ -124,25 +167,16 @@ const Accounts: FC = () => {
         ...(account.currency_id && { currency_id: account.currency_id }),
       });
     } else {
-      setEditingAccount(null);
-      setFormData({
-        name: '',
-        account_type: 'checking',
-        is_investment_account: false,
-      });
+      // Open dialog for creating new account
+      setEditingAccountId(null);
+      openAccountDialog();
     }
     setFormErrors({});
-    setDialogOpen(true);
   };
 
   const handleCloseDialog = () => {
-    setDialogOpen(false);
-    setEditingAccount(null);
-    setFormData({
-      name: '',
-      account_type: 'checking',
-      is_investment_account: false,
-    });
+    setEditingAccountId(null);
+    closeAccountDialog();
     setFormErrors({});
   };
 
@@ -169,60 +203,34 @@ const Accounts: FC = () => {
     return true;
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
     if (!validateForm()) {
       return;
     }
-
-    const submitData: AccountCreate = {
-      name: formData.name.trim(),
-      account_type: formData.account_type,
-      ...(formData.financial_institution_id && {
-        financial_institution_id: formData.financial_institution_id,
-      }),
-      ...(formData.is_investment_account !== undefined && {
-        is_investment_account: formData.is_investment_account,
-      }),
-      ...(formData.interest_rate !== undefined && { interest_rate: formData.interest_rate }),
-      ...(formData.currency_id && { currency_id: formData.currency_id }),
-    };
-
-    try {
-      if (editingAccount) {
-        await dispatch(
-          updateAccount({
-            id: editingAccount.id,
-            data: submitData,
-          })
-        ).unwrap();
-      } else {
-        await dispatch(createAccount(submitData)).unwrap();
-      }
-      handleCloseDialog();
-    } catch (err) {
-      console.error('Failed to save account:', err);
-    }
+    void submitAccount(formData);
   };
 
   const handleOpenDeleteDialog = (account: AccountDetailed) => {
-    setDeletingAccount(account);
-    setDeleteDialogOpen(true);
+    openDeleteDialog(account);
   };
 
   const handleCloseDeleteDialog = () => {
-    setDeleteDialogOpen(false);
-    setDeletingAccount(null);
+    closeDeleteDialog();
   };
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
     if (!deletingAccount) return;
 
-    try {
-      await dispatch(deleteAccount(deletingAccount.id)).unwrap();
-      handleCloseDeleteDialog();
-    } catch (err) {
-      console.error('Failed to delete account:', err);
-    }
+    void (async () => {
+      try {
+        await dispatch(deleteAccount(deletingAccount.id)).unwrap();
+        errorService.showSuccess('Account deleted successfully');
+        handleCloseDeleteDialog();
+      } catch (err) {
+        errorService.showError(err, 'Delete account');
+        console.error('Failed to delete account:', err);
+      }
+    })();
   };
 
   const handleAccountClick = (accountId: string) => {
@@ -341,12 +349,6 @@ const Accounts: FC = () => {
         </Button>
       </Box>
 
-      {error && (
-        <Alert severity="error" sx={{ mb: 3 }} data-testid="error-alert">
-          {error}
-        </Alert>
-      )}
-
       {loading && accounts.length === 0 ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
           <CircularProgress />
@@ -391,7 +393,7 @@ const Accounts: FC = () => {
 
       {/* Add/Edit Dialog */}
       <Dialog open={dialogOpen} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
-        <DialogTitle>{editingAccount ? 'Edit Account' : 'Add Account'}</DialogTitle>
+        <DialogTitle>{isEditing ? 'Edit Account' : 'Add Account'}</DialogTitle>
         <DialogContent>
           <Box sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
             <TextField
@@ -509,8 +511,13 @@ const Accounts: FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDialog}>Cancel</Button>
-          <Button onClick={handleSubmit} variant="contained" data-testid="submit-account">
-            {editingAccount ? 'Update' : 'Add'}
+          <Button
+            onClick={handleSubmit}
+            variant="contained"
+            disabled={isSubmitting}
+            data-testid="submit-account"
+          >
+            {isEditing ? 'Update' : 'Add'}
           </Button>
         </DialogActions>
       </Dialog>

@@ -1,8 +1,8 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import type { Holding, HoldingCreate, HoldingUpdate, ApiError } from '@/types';
+import type { Holding, HoldingCreate, HoldingUpdate } from '@/types';
 import type { RootState } from '@/store';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
+import * as holdingsService from '@/services/holdings';
+import { ApiErrorClass } from '@/services/api';
 
 interface HoldingsState {
   holdings: Holding[];
@@ -16,135 +16,66 @@ const initialState: HoldingsState = {
   error: null,
 };
 
-// Helper function to get auth token
-const getAuthToken = (state: RootState): string | null => {
-  return state.auth.token;
-};
-
 // Async thunks
 export const fetchHoldings = createAsyncThunk<
   Holding[],
   string,
-  { state: RootState; rejectValue: string }
->('holdings/fetchAll', async (accountId, { getState, rejectWithValue }) => {
+  { rejectValue: string }
+>('holdings/fetchAll', async (accountId, { rejectWithValue }) => {
   try {
-    const token = getAuthToken(getState());
-    if (!token) {
-      return rejectWithValue('No authentication token found');
-    }
-
-    const response = await fetch(`${API_BASE_URL}/accounts/${accountId}/holdings`, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      const error: ApiError = await response.json();
-      return rejectWithValue(error.detail || 'Failed to fetch holdings');
-    }
-
-    const data: Holding[] = await response.json();
-    return data;
+    return await holdingsService.fetchAllHoldings(accountId);
   } catch (error) {
-    return rejectWithValue(error instanceof Error ? error.message : 'Unknown error occurred');
+    if (error instanceof ApiErrorClass) {
+      return rejectWithValue(error.message);
+    }
+    return rejectWithValue('Failed to fetch holdings');
   }
 });
 
 export const fetchHoldingById = createAsyncThunk<
   Holding,
   { accountId: string; holdingId: string },
-  { state: RootState; rejectValue: string }
->('holdings/fetchById', async ({ accountId, holdingId }, { getState, rejectWithValue }) => {
+  { rejectValue: string }
+>('holdings/fetchById', async ({ accountId, holdingId }, { rejectWithValue }) => {
   try {
-    const token = getAuthToken(getState());
-    if (!token) {
-      return rejectWithValue('No authentication token found');
-    }
-
-    const response = await fetch(`${API_BASE_URL}/accounts/${accountId}/holdings/${holdingId}`, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      const error: ApiError = await response.json();
-      return rejectWithValue(error.detail || 'Failed to fetch holding');
-    }
-
-    const data: Holding = await response.json();
-    return data;
+    return await holdingsService.fetchHoldingById(accountId, holdingId);
   } catch (error) {
-    return rejectWithValue(error instanceof Error ? error.message : 'Unknown error occurred');
+    if (error instanceof ApiErrorClass) {
+      return rejectWithValue(error.message);
+    }
+    return rejectWithValue('Failed to fetch holding');
   }
 });
 
 export const createHolding = createAsyncThunk<
   Holding,
   { accountId: string; data: HoldingCreate },
-  { state: RootState; rejectValue: string }
->('holdings/create', async ({ accountId, data }, { getState, rejectWithValue }) => {
+  { rejectValue: string }
+>('holdings/create', async ({ accountId, data }, { rejectWithValue }) => {
   try {
-    const token = getAuthToken(getState());
-    if (!token) {
-      return rejectWithValue('No authentication token found');
-    }
-
-    const response = await fetch(`${API_BASE_URL}/accounts/${accountId}/holdings`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data),
-    });
-
-    if (!response.ok) {
-      const error: ApiError = await response.json();
-      return rejectWithValue(error.detail || 'Failed to create holding');
-    }
-
-    const responseData: Holding = await response.json();
-    return responseData;
+    return await holdingsService.createHolding(accountId, data);
   } catch (error) {
-    return rejectWithValue(error instanceof Error ? error.message : 'Unknown error occurred');
+    if (error instanceof ApiErrorClass) {
+      return rejectWithValue(error.message);
+    }
+    return rejectWithValue('Failed to create holding');
   }
 });
 
 export const updateHolding = createAsyncThunk<
   Holding,
   { accountId: string; holdingId: string; data: HoldingUpdate },
-  { state: RootState; rejectValue: string }
+  { rejectValue: string }
 >(
   'holdings/update',
-  async ({ accountId, holdingId, data }, { getState, rejectWithValue }) => {
+  async ({ accountId, holdingId, data }, { rejectWithValue }) => {
     try {
-      const token = getAuthToken(getState());
-      if (!token) {
-        return rejectWithValue('No authentication token found');
-      }
-
-      const response = await fetch(`${API_BASE_URL}/accounts/${accountId}/holdings/${holdingId}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
-
-      if (!response.ok) {
-        const error: ApiError = await response.json();
-        return rejectWithValue(error.detail || 'Failed to update holding');
-      }
-
-      const responseData: Holding = await response.json();
-      return responseData;
+      return await holdingsService.updateHolding(accountId, holdingId, data);
     } catch (error) {
-      return rejectWithValue(error instanceof Error ? error.message : 'Unknown error occurred');
+      if (error instanceof ApiErrorClass) {
+        return rejectWithValue(error.message);
+      }
+      return rejectWithValue('Failed to update holding');
     }
   }
 );
@@ -152,30 +83,16 @@ export const updateHolding = createAsyncThunk<
 export const deleteHolding = createAsyncThunk<
   string,
   { accountId: string; holdingId: string },
-  { state: RootState; rejectValue: string }
->('holdings/delete', async ({ accountId, holdingId }, { getState, rejectWithValue }) => {
+  { rejectValue: string }
+>('holdings/delete', async ({ accountId, holdingId }, { rejectWithValue }) => {
   try {
-    const token = getAuthToken(getState());
-    if (!token) {
-      return rejectWithValue('No authentication token found');
-    }
-
-    const response = await fetch(`${API_BASE_URL}/accounts/${accountId}/holdings/${holdingId}`, {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      const error: ApiError = await response.json();
-      return rejectWithValue(error.detail || 'Failed to delete holding');
-    }
-
+    await holdingsService.deleteHolding(accountId, holdingId);
     return holdingId;
   } catch (error) {
-    return rejectWithValue(error instanceof Error ? error.message : 'Unknown error occurred');
+    if (error instanceof ApiErrorClass) {
+      return rejectWithValue(error.message);
+    }
+    return rejectWithValue('Failed to delete holding');
   }
 });
 

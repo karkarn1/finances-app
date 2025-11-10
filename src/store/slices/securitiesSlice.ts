@@ -7,6 +7,7 @@ import type { RootState } from '@/store';
 import type { Security, PriceData, Timeframe, DataCompleteness } from '@/types';
 import * as securitiesApi from '@/services/securities';
 import { getTimeframeRange } from '@/utils/timeframes';
+import { formatErrorMessage } from '@/utils/errorHandler';
 
 interface SecuritiesState {
   searchResults: Security[];
@@ -139,7 +140,7 @@ const securitiesSlice = createSlice({
       })
       .addCase(searchSecuritiesAsync.rejected, (state, action) => {
         state.isSearching = false;
-        state.error = action.error.message || 'Failed to search securities';
+        state.error = formatErrorMessage(action.error);
       });
 
     // Fetch security
@@ -154,7 +155,7 @@ const securitiesSlice = createSlice({
       })
       .addCase(fetchSecurityAsync.rejected, (state, action) => {
         state.isLoadingSecurity = false;
-        state.error = action.error.message || 'Failed to fetch security';
+        state.error = formatErrorMessage(action.error);
       });
 
     // Sync security
@@ -169,7 +170,7 @@ const securitiesSlice = createSlice({
       })
       .addCase(syncSecurityAsync.rejected, (state, action) => {
         state.isSyncing = false;
-        state.error = action.error.message || 'Failed to sync security data';
+        state.error = formatErrorMessage(action.error);
       });
 
     // Fetch prices
@@ -187,7 +188,7 @@ const securitiesSlice = createSlice({
       })
       .addCase(fetchPricesAsync.rejected, (state, action) => {
         state.isLoadingPrices = false;
-        state.error = action.error.message || 'Failed to fetch price data';
+        state.error = formatErrorMessage(action.error);
       });
   },
 });

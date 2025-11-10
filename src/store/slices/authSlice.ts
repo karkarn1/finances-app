@@ -13,6 +13,7 @@ import type {
 } from '@/types';
 import * as authService from '@/services/auth';
 import { ApiErrorClass } from '@/services/api';
+import { formatErrorMessage } from '@/utils/errorHandler';
 
 // Auth state interface
 interface AuthState {
@@ -203,7 +204,7 @@ const authSlice = createSlice({
       })
       .addCase(loginUser.rejected, (state, action) => {
         state.isLoading = false;
-        state.error = action.payload || 'Login failed';
+        state.error = formatErrorMessage(action.error);
         state.isAuthenticated = false;
       });
 
@@ -223,7 +224,7 @@ const authSlice = createSlice({
       })
       .addCase(registerUser.rejected, (state, action) => {
         state.isLoading = false;
-        state.error = action.payload || 'Registration failed';
+        state.error = formatErrorMessage(action.error);
       });
 
     // Logout
@@ -248,7 +249,7 @@ const authSlice = createSlice({
       })
       .addCase(fetchCurrentUser.rejected, (state, action) => {
         state.isLoading = false;
-        state.error = action.payload || 'Failed to fetch user';
+        state.error = formatErrorMessage(action.error);
         state.user = null;
         state.token = null;
         state.refreshToken = null;
@@ -267,7 +268,7 @@ const authSlice = createSlice({
       })
       .addCase(forgotPassword.rejected, (state, action) => {
         state.isLoading = false;
-        state.error = action.payload || 'Failed to send reset email';
+        state.error = formatErrorMessage(action.error);
       });
 
     // Reset password
@@ -282,7 +283,7 @@ const authSlice = createSlice({
       })
       .addCase(resetPassword.rejected, (state, action) => {
         state.isLoading = false;
-        state.error = action.payload || 'Failed to reset password';
+        state.error = formatErrorMessage(action.error);
       });
   },
 });

@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import { Box } from '@mui/material';
+import { SnackbarProvider } from 'notistack';
 import { theme } from './theme';
 import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
@@ -16,6 +17,7 @@ import Currencies from './pages/Currencies';
 import CurrencyDetail from './pages/CurrencyDetail';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { useAppSelector } from '@/hooks';
 import { selectIsAuthenticated } from '@/store/slices/authSlice';
 
@@ -23,11 +25,20 @@ function App() {
   const isAuthenticated = useAppSelector(selectIsAuthenticated);
 
   return (
-    <ThemeProvider theme={theme}>
-      <Router>
-        <Layout>
-          <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
-            <Routes>
+    <ErrorBoundary>
+      <SnackbarProvider
+        maxSnack={3}
+        anchorOrigin={{
+          vertical: 'top',
+          horizontal: 'right',
+        }}
+        autoHideDuration={4000}
+      >
+        <ThemeProvider theme={theme}>
+          <Router>
+            <Layout>
+              <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
+                <Routes>
               {/* Public routes */}
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
@@ -112,13 +123,15 @@ function App() {
                 }
               />
 
-              {/* Catch all - redirect to root */}
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </Box>
-        </Layout>
-      </Router>
-    </ThemeProvider>
+                  {/* Catch all - redirect to root */}
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+              </Box>
+            </Layout>
+          </Router>
+        </ThemeProvider>
+      </SnackbarProvider>
+    </ErrorBoundary>
   );
 }
 

@@ -6,11 +6,11 @@ import type {
   AccountValue,
   AccountValueCreate,
   AccountValueUpdate,
-  ApiError,
 } from '@/types';
 import type { RootState } from '@/store';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
+import * as accountsService from '@/services/accounts';
+import { ApiErrorClass } from '@/services/api';
+import { formatErrorMessage } from '@/utils/errorHandler';
 
 interface AccountsState {
   accounts: AccountDetailed[];
@@ -28,163 +28,80 @@ const initialState: AccountsState = {
   error: null,
 };
 
-// Helper function to get auth token
-const getAuthToken = (state: RootState): string | null => {
-  return state.auth.token;
-};
-
 // Account async thunks
 export const fetchAccounts = createAsyncThunk<
   AccountDetailed[],
   void,
-  { state: RootState; rejectValue: string }
->('accounts/fetchAll', async (_, { getState, rejectWithValue }) => {
+  { rejectValue: string }
+>('accounts/fetchAll', async (_, { rejectWithValue }) => {
   try {
-    const token = getAuthToken(getState());
-    if (!token) {
-      return rejectWithValue('No authentication token found');
-    }
-
-    const response = await fetch(`${API_BASE_URL}/accounts`, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      const error: ApiError = await response.json();
-      return rejectWithValue(error.detail || 'Failed to fetch accounts');
-    }
-
-    const data: AccountDetailed[] = await response.json();
-    return data;
+    return await accountsService.fetchAllAccounts();
   } catch (error) {
-    return rejectWithValue(error instanceof Error ? error.message : 'Unknown error occurred');
+    if (error instanceof ApiErrorClass) {
+      return rejectWithValue(error.message);
+    }
+    return rejectWithValue('Failed to fetch accounts');
   }
 });
 
 export const fetchAccountById = createAsyncThunk<
   AccountDetailed,
   string,
-  { state: RootState; rejectValue: string }
->('accounts/fetchById', async (id, { getState, rejectWithValue }) => {
+  { rejectValue: string }
+>('accounts/fetchById', async (id, { rejectWithValue }) => {
   try {
-    const token = getAuthToken(getState());
-    if (!token) {
-      return rejectWithValue('No authentication token found');
-    }
-
-    const response = await fetch(`${API_BASE_URL}/accounts/${id}`, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      const error: ApiError = await response.json();
-      return rejectWithValue(error.detail || 'Failed to fetch account');
-    }
-
-    const data: AccountDetailed = await response.json();
-    return data;
+    return await accountsService.fetchAccountById(id);
   } catch (error) {
-    return rejectWithValue(error instanceof Error ? error.message : 'Unknown error occurred');
+    if (error instanceof ApiErrorClass) {
+      return rejectWithValue(error.message);
+    }
+    return rejectWithValue('Failed to fetch account');
   }
 });
 
 export const createAccount = createAsyncThunk<
   AccountDetailed,
   AccountCreate,
-  { state: RootState; rejectValue: string }
->('accounts/create', async (accountData, { getState, rejectWithValue }) => {
+  { rejectValue: string }
+>('accounts/create', async (accountData, { rejectWithValue }) => {
   try {
-    const token = getAuthToken(getState());
-    if (!token) {
-      return rejectWithValue('No authentication token found');
-    }
-
-    const response = await fetch(`${API_BASE_URL}/accounts`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(accountData),
-    });
-
-    if (!response.ok) {
-      const error: ApiError = await response.json();
-      return rejectWithValue(error.detail || 'Failed to create account');
-    }
-
-    const data: AccountDetailed = await response.json();
-    return data;
+    return await accountsService.createAccount(accountData);
   } catch (error) {
-    return rejectWithValue(error instanceof Error ? error.message : 'Unknown error occurred');
+    if (error instanceof ApiErrorClass) {
+      return rejectWithValue(error.message);
+    }
+    return rejectWithValue('Failed to create account');
   }
 });
 
 export const updateAccount = createAsyncThunk<
   AccountDetailed,
   { id: string; data: AccountUpdate },
-  { state: RootState; rejectValue: string }
->('accounts/update', async ({ id, data }, { getState, rejectWithValue }) => {
+  { rejectValue: string }
+>('accounts/update', async ({ id, data }, { rejectWithValue }) => {
   try {
-    const token = getAuthToken(getState());
-    if (!token) {
-      return rejectWithValue('No authentication token found');
-    }
-
-    const response = await fetch(`${API_BASE_URL}/accounts/${id}`, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data),
-    });
-
-    if (!response.ok) {
-      const error: ApiError = await response.json();
-      return rejectWithValue(error.detail || 'Failed to update account');
-    }
-
-    const responseData: AccountDetailed = await response.json();
-    return responseData;
+    return await accountsService.updateAccount(id, data);
   } catch (error) {
-    return rejectWithValue(error instanceof Error ? error.message : 'Unknown error occurred');
+    if (error instanceof ApiErrorClass) {
+      return rejectWithValue(error.message);
+    }
+    return rejectWithValue('Failed to update account');
   }
 });
 
 export const deleteAccount = createAsyncThunk<
   string,
   string,
-  { state: RootState; rejectValue: string }
->('accounts/delete', async (id, { getState, rejectWithValue }) => {
+  { rejectValue: string }
+>('accounts/delete', async (id, { rejectWithValue }) => {
   try {
-    const token = getAuthToken(getState());
-    if (!token) {
-      return rejectWithValue('No authentication token found');
-    }
-
-    const response = await fetch(`${API_BASE_URL}/accounts/${id}`, {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      const error: ApiError = await response.json();
-      return rejectWithValue(error.detail || 'Failed to delete account');
-    }
-
+    await accountsService.deleteAccount(id);
     return id;
   } catch (error) {
-    return rejectWithValue(error instanceof Error ? error.message : 'Unknown error occurred');
+    if (error instanceof ApiErrorClass) {
+      return rejectWithValue(error.message);
+    }
+    return rejectWithValue('Failed to delete account');
   }
 });
 
@@ -192,96 +109,47 @@ export const deleteAccount = createAsyncThunk<
 export const fetchAccountValues = createAsyncThunk<
   AccountValue[],
   string,
-  { state: RootState; rejectValue: string }
->('accounts/fetchValues', async (accountId, { getState, rejectWithValue }) => {
+  { rejectValue: string }
+>('accounts/fetchValues', async (accountId, { rejectWithValue }) => {
   try {
-    const token = getAuthToken(getState());
-    if (!token) {
-      return rejectWithValue('No authentication token found');
-    }
-
-    const response = await fetch(`${API_BASE_URL}/accounts/${accountId}/values`, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      const error: ApiError = await response.json();
-      return rejectWithValue(error.detail || 'Failed to fetch account values');
-    }
-
-    const data: AccountValue[] = await response.json();
-    return data;
+    return await accountsService.fetchAccountValues(accountId);
   } catch (error) {
-    return rejectWithValue(error instanceof Error ? error.message : 'Unknown error occurred');
+    if (error instanceof ApiErrorClass) {
+      return rejectWithValue(error.message);
+    }
+    return rejectWithValue('Failed to fetch account values');
   }
 });
 
 export const createAccountValue = createAsyncThunk<
   AccountValue,
   { accountId: string; data: AccountValueCreate },
-  { state: RootState; rejectValue: string }
->('accounts/createValue', async ({ accountId, data }, { getState, rejectWithValue }) => {
+  { rejectValue: string }
+>('accounts/createValue', async ({ accountId, data }, { rejectWithValue }) => {
   try {
-    const token = getAuthToken(getState());
-    if (!token) {
-      return rejectWithValue('No authentication token found');
-    }
-
-    const response = await fetch(`${API_BASE_URL}/accounts/${accountId}/values`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data),
-    });
-
-    if (!response.ok) {
-      const error: ApiError = await response.json();
-      return rejectWithValue(error.detail || 'Failed to create account value');
-    }
-
-    const responseData: AccountValue = await response.json();
-    return responseData;
+    return await accountsService.createAccountValue(accountId, data);
   } catch (error) {
-    return rejectWithValue(error instanceof Error ? error.message : 'Unknown error occurred');
+    if (error instanceof ApiErrorClass) {
+      return rejectWithValue(error.message);
+    }
+    return rejectWithValue('Failed to create account value');
   }
 });
 
 export const updateAccountValue = createAsyncThunk<
   AccountValue,
   { accountId: string; valueId: string; data: AccountValueUpdate },
-  { state: RootState; rejectValue: string }
+  { rejectValue: string }
 >(
   'accounts/updateValue',
-  async ({ accountId, valueId, data }, { getState, rejectWithValue }) => {
+  async ({ accountId, valueId, data }, { rejectWithValue }) => {
     try {
-      const token = getAuthToken(getState());
-      if (!token) {
-        return rejectWithValue('No authentication token found');
-      }
-
-      const response = await fetch(`${API_BASE_URL}/accounts/${accountId}/values/${valueId}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
-
-      if (!response.ok) {
-        const error: ApiError = await response.json();
-        return rejectWithValue(error.detail || 'Failed to update account value');
-      }
-
-      const responseData: AccountValue = await response.json();
-      return responseData;
+      return await accountsService.updateAccountValue(accountId, valueId, data);
     } catch (error) {
-      return rejectWithValue(error instanceof Error ? error.message : 'Unknown error occurred');
+      if (error instanceof ApiErrorClass) {
+        return rejectWithValue(error.message);
+      }
+      return rejectWithValue('Failed to update account value');
     }
   }
 );
@@ -289,30 +157,16 @@ export const updateAccountValue = createAsyncThunk<
 export const deleteAccountValue = createAsyncThunk<
   string,
   { accountId: string; valueId: string },
-  { state: RootState; rejectValue: string }
->('accounts/deleteValue', async ({ accountId, valueId }, { getState, rejectWithValue }) => {
+  { rejectValue: string }
+>('accounts/deleteValue', async ({ accountId, valueId }, { rejectWithValue }) => {
   try {
-    const token = getAuthToken(getState());
-    if (!token) {
-      return rejectWithValue('No authentication token found');
-    }
-
-    const response = await fetch(`${API_BASE_URL}/accounts/${accountId}/values/${valueId}`, {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      const error: ApiError = await response.json();
-      return rejectWithValue(error.detail || 'Failed to delete account value');
-    }
-
+    await accountsService.deleteAccountValue(accountId, valueId);
     return valueId;
   } catch (error) {
-    return rejectWithValue(error instanceof Error ? error.message : 'Unknown error occurred');
+    if (error instanceof ApiErrorClass) {
+      return rejectWithValue(error.message);
+    }
+    return rejectWithValue('Failed to delete account value');
   }
 });
 
@@ -344,7 +198,7 @@ const accountsSlice = createSlice({
       })
       .addCase(fetchAccounts.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload || 'Failed to fetch accounts';
+        state.error = formatErrorMessage(action.error);
       })
       // Fetch account by ID
       .addCase(fetchAccountById.pending, (state) => {
@@ -364,7 +218,7 @@ const accountsSlice = createSlice({
       })
       .addCase(fetchAccountById.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload || 'Failed to fetch account';
+        state.error = formatErrorMessage(action.error);
       })
       // Create account
       .addCase(createAccount.pending, (state) => {
@@ -377,7 +231,7 @@ const accountsSlice = createSlice({
       })
       .addCase(createAccount.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload || 'Failed to create account';
+        state.error = formatErrorMessage(action.error);
       })
       // Update account
       .addCase(updateAccount.pending, (state) => {
@@ -396,7 +250,7 @@ const accountsSlice = createSlice({
       })
       .addCase(updateAccount.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload || 'Failed to update account';
+        state.error = formatErrorMessage(action.error);
       })
       // Delete account
       .addCase(deleteAccount.pending, (state) => {
@@ -412,7 +266,7 @@ const accountsSlice = createSlice({
       })
       .addCase(deleteAccount.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload || 'Failed to delete account';
+        state.error = formatErrorMessage(action.error);
       })
       // Fetch account values
       .addCase(fetchAccountValues.pending, (state) => {
@@ -425,7 +279,7 @@ const accountsSlice = createSlice({
       })
       .addCase(fetchAccountValues.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload || 'Failed to fetch account values';
+        state.error = formatErrorMessage(action.error);
       })
       // Create account value
       .addCase(createAccountValue.pending, (state) => {
@@ -438,7 +292,7 @@ const accountsSlice = createSlice({
       })
       .addCase(createAccountValue.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload || 'Failed to create account value';
+        state.error = formatErrorMessage(action.error);
       })
       // Update account value
       .addCase(updateAccountValue.pending, (state) => {
@@ -454,7 +308,7 @@ const accountsSlice = createSlice({
       })
       .addCase(updateAccountValue.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload || 'Failed to update account value';
+        state.error = formatErrorMessage(action.error);
       })
       // Delete account value
       .addCase(deleteAccountValue.pending, (state) => {
@@ -467,7 +321,7 @@ const accountsSlice = createSlice({
       })
       .addCase(deleteAccountValue.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload || 'Failed to delete account value';
+        state.error = formatErrorMessage(action.error);
       });
   },
 });
