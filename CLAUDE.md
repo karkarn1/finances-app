@@ -131,12 +131,14 @@ e2e/
 │   └── test-user.ts         # Test credentials and expected data
 ├── helpers/
 │   └── navigation.ts        # NavigationHelper class
-├── auth.spec.ts             # Authentication flow (6 tests)
+├── auth-flows.spec.ts       # Complete authentication workflows (42 tests)
+├── securities.spec.ts       # Securities tracking (29 tests)
 ├── navigation.spec.ts       # Navigation & sidebar (9 tests)
 ├── dashboard.spec.ts        # Dashboard functionality (6 tests)
 ├── accounts.spec.ts         # Account management (6 tests)
-├── holdings.spec.ts         # Portfolio holdings (5 tests)
-└── expenses.spec.ts         # Expense tracking (7 tests)
+├── holdings.spec.ts         # Portfolio holdings (6 tests)
+├── expenses.spec.ts         # Expense tracking (5 tests)
+└── goals.spec.ts            # Financial goals (7 tests)
 ```
 
 **NavigationHelper Pattern:**
@@ -354,18 +356,28 @@ export const Component: FC<ComponentProps> = ({ title, value, onChange }) => {
 
 Currently using mock data. When implementing backend:
 
-### Required Endpoints
-- `POST /api/auth/login` - User authentication
-- `GET /api/accounts` - Fetch all accounts
-- `POST /api/accounts` - Create account
-- `PUT /api/accounts/:id` - Update account
-- `DELETE /api/accounts/:id` - Delete account
-- `GET /api/holdings` - Fetch portfolio holdings
-- `GET /api/expenses` - Fetch recurring expenses
-- `GET /api/income` - Fetch income sources
-- `GET /api/goals` - Fetch financial goals
-- `GET /api/dashboard/metrics` - Dashboard summary
-- `POST /api/ai/query` - AI assistant queries
+### Implemented Endpoints
+- `POST /api/v1/auth/register` - User registration (✅ Implemented)
+- `POST /api/v1/auth/login` - User authentication (✅ Implemented)
+- `POST /api/v1/auth/forgot-password` - Request password reset (✅ Implemented)
+- `POST /api/v1/auth/reset-password` - Reset password with token (✅ Implemented)
+- `GET /api/v1/auth/me` - Get current user (✅ Implemented)
+- `PATCH /api/v1/users/me` - Update user profile (✅ Implemented)
+- `GET /api/v1/securities/search?q={query}` - Search securities (✅ Implemented)
+- `GET /api/v1/securities/{symbol}` - Get security details (✅ Implemented)
+- `POST /api/v1/securities/{symbol}/sync` - Sync from Yahoo Finance (✅ Implemented)
+- `GET /api/v1/securities/{symbol}/prices` - Historical prices (✅ Implemented)
+
+### Required Endpoints (Future)
+- `GET /api/v1/accounts` - Fetch all accounts
+- `POST /api/v1/accounts` - Create account
+- `PUT /api/v1/accounts/:id` - Update account
+- `DELETE /api/v1/accounts/:id` - Delete account
+- `GET /api/v1/holdings` - Fetch portfolio holdings
+- `GET /api/v1/expenses` - Fetch recurring expenses
+- `GET /api/v1/income` - Fetch income sources
+- `GET /api/v1/goals` - Fetch financial goals
+- `GET /api/v1/dashboard/metrics` - Dashboard summary
 
 ## Performance Optimizations
 
@@ -404,6 +416,6 @@ WCAG 2.1 AA compliant:
 
 ---
 
-**Last Updated:** November 9, 2025
-**Application Status:** Fully Functional
-**Test Coverage:** 39 E2E tests across 6 test suites
+**Last Updated:** November 10, 2025
+**Application Status:** Fully Functional with Real API Integration for Auth & Securities
+**Test Coverage:** 110 E2E tests across 8 test suites

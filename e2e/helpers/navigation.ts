@@ -11,7 +11,7 @@ export class NavigationHelper {
     await this.page.goto('/');
     await this.page.fill('input[type="text"], input[type="email"]', email);
     await this.page.fill('input[type="password"]', password);
-    await this.page.click('button:has-text("Log in")');
+    await this.page.click('button:has-text("Sign In")');
 
     // Wait for dashboard to load
     await this.page.waitForSelector('h2:has-text("Dashboard")');

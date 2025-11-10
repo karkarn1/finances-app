@@ -9,10 +9,18 @@ A comprehensive personal finance management web application built with React 18+
 
 ## 🌟 Features
 
+### Authentication & Security
+- **🔐 User Authentication** - Secure JWT-based authentication
+- **📝 User Registration** - Create new accounts with email/username
+- **🔑 Password Management** - Secure password reset flow
+- **🛡️ Protected Routes** - Client-side route protection
+
 ### Financial Tracking
 - **📊 Dashboard** - Complete financial overview with interactive charts and metrics
 - **💰 Account Management** - Track assets, liabilities, and investment accounts
 - **📈 Portfolio Holdings** - Monitor investment performance across multiple timeframes
+- **📊 Securities Tracking** - Search and track stocks, ETFs, and other securities
+- **📉 Price Charts** - Historical price data with 8 timeframes (1D, 1W, 1M, 6M, YTD, 1Y, 5Y, ALL)
 - **⚖️ Rebalancing** - Get intelligent portfolio rebalancing recommendations
 - **💸 Expense Tracking** - Manage recurring expenses with category breakdowns
 - **💵 Income Management** - Track multiple income sources and trends
@@ -86,9 +94,15 @@ Password: pass
 
 | Page | Route | Description |
 |------|-------|-------------|
-| **Dashboard** | `/` | Financial overview with charts and AI assistant |
+| **Login** | `/login` | User authentication |
+| **Register** | `/register` | New user registration |
+| **Forgot Password** | `/forgot-password` | Password reset request |
+| **Reset Password** | `/reset-password` | Password reset with token |
+| **Dashboard** | `/dashboard` | Financial overview with charts and AI assistant |
 | **Accounts** | `/accounts` | Manage all financial accounts |
 | **Holdings** | `/holdings` | Investment portfolio tracking |
+| **Securities** | `/securities` | Search and browse securities |
+| **Security Detail** | `/securities/:symbol` | View security details and price charts |
 | **Rebalancing** | `/rebalancing` | Portfolio optimization tools |
 | **Expenses** | `/expenses` | Recurring expense management |
 | **Income** | `/income` | Income source tracking |
@@ -116,10 +130,12 @@ Password: pass
 - **React Router DOM** 6.26.0 - Declarative routing
 
 ### Charts & Visualizations
-- Line charts - Net worth, assets, portfolio trends
+- **Recharts** 2.13.3 - Composable charting library
+- Line charts - Net worth, assets, portfolio trends, security prices
 - Pie charts - Allocation, expenses, income breakdown
 - Bar charts - Account comparisons, gain/loss
 - Stacked area charts - Category trends over time
+- Historical price charts - OHLC data with multiple timeframes
 
 ### Development & Testing
 - **ESLint** - Code quality and consistency
@@ -139,36 +155,57 @@ finances-app/
 │   │   ├── Layout/         # Page layout wrapper
 │   │   ├── Sidebar/        # Navigation sidebar
 │   │   ├── Charts/         # Chart components
-│   │   └── Cards/          # Metric cards
+│   │   ├── Cards/          # Metric cards
+│   │   ├── PriceChart/     # Securities price chart
+│   │   └── ProtectedRoute/ # Auth route wrapper
 │   ├── pages/              # Route components
+│   │   ├── Login/          # User login
+│   │   ├── Register/       # User registration
+│   │   ├── ForgotPassword/ # Password reset request
+│   │   ├── ResetPassword/  # Password reset with token
 │   │   ├── Dashboard/      # Main dashboard
 │   │   ├── Accounts/       # Account management
 │   │   ├── Holdings/       # Portfolio holdings
+│   │   ├── Securities/     # Securities search/list
+│   │   ├── SecurityDetail/ # Security detail with charts
 │   │   ├── Rebalancing/    # Rebalancing tools
 │   │   ├── Expenses/       # Expense tracking
 │   │   ├── Income/         # Income management
 │   │   ├── Goals/          # Financial goals
 │   │   └── Settings/       # User settings
+│   ├── services/           # API service layer
+│   │   ├── api.ts          # Base API client
+│   │   ├── auth.ts         # Auth service
+│   │   └── securities.ts   # Securities service
 │   ├── hooks/              # Custom React hooks
 │   │   └── index.ts        # Redux hooks
 │   ├── store/              # Redux state
 │   │   ├── slices/         # Redux slices
+│   │   │   ├── authSlice.ts      # Authentication state
+│   │   │   └── securitiesSlice.ts # Securities state
 │   │   └── index.ts        # Store config
 │   ├── types/              # TypeScript types
 │   ├── utils/              # Utility functions
+│   │   └── timeframes.ts   # Date range calculations
 │   ├── App.tsx             # Root component
 │   ├── main.tsx            # Entry point
 │   ├── theme.ts            # MUI theme
 │   └── index.css           # Global styles
 ├── e2e/                     # E2E tests (Playwright)
 │   ├── fixtures/           # Test data and credentials
+│   │   ├── test-user.ts         # User test data
+│   │   ├── auth-test-data.ts    # Auth test data
+│   │   └── securities-test-data.ts # Securities test data
 │   ├── helpers/            # Test utilities
-│   ├── auth.spec.ts        # Authentication tests
-│   ├── navigation.spec.ts  # Navigation tests
-│   ├── dashboard.spec.ts   # Dashboard tests
-│   ├── accounts.spec.ts    # Accounts tests
-│   ├── holdings.spec.ts    # Holdings tests
-│   └── expenses.spec.ts    # Expenses tests
+│   │   └── navigation.ts   # Navigation helper
+│   ├── auth.spec.ts        # Authentication tests (6 tests)
+│   ├── auth-flows.spec.ts  # Auth flow tests (42 tests)
+│   ├── navigation.spec.ts  # Navigation tests (9 tests)
+│   ├── dashboard.spec.ts   # Dashboard tests (6 tests)
+│   ├── accounts.spec.ts    # Accounts tests (6 tests)
+│   ├── holdings.spec.ts    # Holdings tests (5 tests)
+│   ├── expenses.spec.ts    # Expenses tests (7 tests)
+│   └── securities.spec.ts  # Securities tests (29 tests)
 ├── public/                  # Static assets
 ├── screenshots/             # Application screenshots
 ├── CLAUDE.md               # AI assistant context
@@ -215,9 +252,11 @@ yarn test:e2e:report   # View HTML test report
 
 ### E2E Testing with Playwright
 
-**39 E2E tests** across **6 test suites** covering all major functionality:
+**110 E2E tests** across **8 test suites** covering all major functionality:
 
-- **auth.spec.ts** (6 tests) - Login, social auth, password recovery
+- **auth.spec.ts** (6 tests) - Basic auth flows
+- **auth-flows.spec.ts** (42 tests) - Complete authentication workflows (login, register, password reset)
+- **securities.spec.ts** (29 tests) - Securities tracking (search, detail, charts, sync)
 - **navigation.spec.ts** (9 tests) - Sidebar navigation, user profile
 - **dashboard.spec.ts** (6 tests) - Metrics, charts, AI assistant
 - **accounts.spec.ts** (6 tests) - Asset, liability, investment accounts
@@ -449,7 +488,7 @@ Before committing:
 - ✅ `yarn type-check` - Zero TypeScript errors
 - ✅ `yarn lint` - Zero ESLint warnings
 - ✅ `yarn test` - All unit tests passing
-- ✅ `yarn test:e2e` - All E2E tests passing (39 tests)
+- ✅ `yarn test:e2e` - All E2E tests passing (110 tests)
 - ✅ `yarn build` - Successful production build
 
 ## 📄 License
@@ -477,9 +516,9 @@ For detailed feature specifications and development guidelines:
 ---
 
 **Version:** 1.0.0
-**Last Updated:** November 9, 2025
+**Last Updated:** November 10, 2025
 **Status:** ✅ Fully Functional
-**Test Coverage:** 39 E2E tests across 6 test suites
-**Live Demo:** http://localhost:3000/
+**Test Coverage:** 110 E2E tests across 8 test suites
+**Live Demo:** http://localhost:5173/
 
 Built with ❤️ using React, TypeScript, and Material-UI
