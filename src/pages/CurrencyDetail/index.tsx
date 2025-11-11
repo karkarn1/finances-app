@@ -18,7 +18,6 @@ import {
   TableRow,
   CircularProgress,
   Alert,
-  Chip,
   Snackbar,
   TextField,
 } from '@mui/material';
@@ -181,12 +180,6 @@ const CurrencyDetail: FC = () => {
             <Typography variant="h6" data-testid="currency-symbol">
               Symbol: {currency.symbol}
             </Typography>
-            <Chip
-              label={currency.isActive ? 'Active' : 'Inactive'}
-              color={currency.isActive ? 'success' : 'default'}
-              size="small"
-              data-testid="currency-status"
-            />
           </Box>
         </Box>
 
@@ -273,12 +266,6 @@ const CurrencyDetail: FC = () => {
         )}
       </Paper>
 
-      {/* Currency info footer */}
-      <Paper sx={{ p: 2 }}>
-        <Typography variant="caption" color="text.secondary">
-          Last updated: {formatDateShort(currency.updatedAt)}
-        </Typography>
-      </Paper>
 
       {/* Success/Error Snackbar */}
       <Snackbar

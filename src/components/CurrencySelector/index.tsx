@@ -36,7 +36,7 @@ const CurrencySelector: FC<CurrencySelectorProps> = ({
   // Fetch currencies on mount if not already loaded
   useEffect(() => {
     if (currencies.length === 0 && !loading) {
-      void dispatch(fetchCurrencies(true));
+      void dispatch(fetchCurrencies());
     }
   }, [dispatch, currencies.length, loading]);
 

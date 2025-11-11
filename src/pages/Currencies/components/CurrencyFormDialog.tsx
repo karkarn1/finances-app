@@ -11,8 +11,6 @@ import {
   DialogActions,
   Button,
   TextField,
-  FormControlLabel,
-  Checkbox,
   Box,
 } from '@mui/material';
 
@@ -20,7 +18,6 @@ interface CurrencyFormData {
   code: string;
   name: string;
   symbol: string;
-  isActive: boolean;
 }
 
 interface CurrencyFormDialogProps {
@@ -40,7 +37,6 @@ export const CurrencyFormDialog: FC<CurrencyFormDialogProps> = ({
     code: '',
     name: '',
     symbol: '',
-    isActive: true,
   });
 
   const [formErrors, setFormErrors] = useState<{
@@ -93,7 +89,7 @@ export const CurrencyFormDialog: FC<CurrencyFormDialogProps> = ({
     onSubmit(formData);
   };
 
-  const handleFormChange = (field: keyof CurrencyFormData, value: string | boolean) => {
+  const handleFormChange = (field: keyof CurrencyFormData, value: string) => {
     setFormData({
       ...formData,
       [field]: value,
@@ -112,7 +108,6 @@ export const CurrencyFormDialog: FC<CurrencyFormDialogProps> = ({
       code: '',
       name: '',
       symbol: '',
-      isActive: true,
     });
     setFormErrors({});
     onClose();
@@ -161,16 +156,6 @@ export const CurrencyFormDialog: FC<CurrencyFormDialogProps> = ({
             data-testid="currency-symbol-input"
             required
             fullWidth
-          />
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={formData.isActive}
-                onChange={(e) => handleFormChange('isActive', e.target.checked)}
-                data-testid="currency-active-checkbox"
-              />
-            }
-            label="Active"
           />
         </Box>
       </DialogContent>

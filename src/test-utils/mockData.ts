@@ -11,10 +11,8 @@ export const mockUser: User = {
   id: '1',
   username: 'testuser',
   email: 'test@example.com',
-  isActive: true,
-  isSuperuser: false,
-  createdAt: '2024-01-01T00:00:00Z',
-  updatedAt: '2024-01-01T00:00:00Z',
+  is_active: true,
+  is_superuser: false,
 };
 
 /**
@@ -24,10 +22,8 @@ export const mockSuperuser: User = {
   id: '2',
   username: 'admin',
   email: 'admin@example.com',
-  isActive: true,
-  isSuperuser: true,
-  createdAt: '2024-01-01T00:00:00Z',
-  updatedAt: '2024-01-01T00:00:00Z',
+  is_active: true,
+  is_superuser: true,
 };
 
 /**
@@ -37,10 +33,8 @@ export const mockInactiveUser: User = {
   id: '3',
   username: 'inactive',
   email: 'inactive@example.com',
-  isActive: false,
-  isSuperuser: false,
-  createdAt: '2024-01-01T00:00:00Z',
-  updatedAt: '2024-01-01T00:00:00Z',
+  is_active: false,
+  is_superuser: false,
 };
 
 /**
@@ -84,12 +78,9 @@ export const mockSecurityWithPrices = {
  * Mock currency
  */
 export const mockCurrency = {
-  id: '1',
   code: 'USD',
   name: 'US Dollar',
   symbol: '$',
-  createdAt: '2024-01-01T00:00:00Z',
-  updatedAt: '2024-01-01T00:00:00Z',
 };
 
 /**

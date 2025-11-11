@@ -10,11 +10,8 @@ import {
   Typography,
   Button,
   Alert,
-  Chip,
   IconButton,
   Tooltip,
-  FormControlLabel,
-  Switch,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -24,8 +21,6 @@ import {
 } from '@mui/material';
 import {
   Sync as SyncIcon,
-  CheckCircle as CheckCircleIcon,
-  Cancel as CancelIcon,
   Refresh as RefreshIcon,
   Add as AddIcon,
 } from '@mui/icons-material';
@@ -50,7 +45,6 @@ interface CurrencyFormData {
   code: string;
   name: string;
   symbol: string;
-  isActive: boolean;
 }
 
 const Currencies: FC = () => {
@@ -61,7 +55,6 @@ const Currencies: FC = () => {
   const error = useAppSelector(selectCurrenciesError);
   const syncStatus = useAppSelector(selectSyncStatus);
 
-  const [showActiveOnly, setShowActiveOnly] = useState(true);
   const [currencyDialogOpen, setCurrencyDialogOpen] = useState(false);
   const [syncDialogOpen, setSyncDialogOpen] = useState(false);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
@@ -75,7 +68,6 @@ const Currencies: FC = () => {
         code: data.code,
         name: data.name,
         symbol: data.symbol,
-        isActive: data.isActive,
       };
 
       await dispatch(createCurrency(currencyData)).unwrap();
@@ -83,13 +75,13 @@ const Currencies: FC = () => {
     },
     () => {
       setCurrencyDialogOpen(false);
-      void dispatch(fetchCurrencies(!showActiveOnly));
+      void dispatch(fetchCurrencies());
     }
   );
 
   useEffect(() => {
-    void dispatch(fetchCurrencies(!showActiveOnly));
-  }, [dispatch, showActiveOnly]);
+    void dispatch(fetchCurrencies());
+  }, [dispatch]);
 
   useEffect(() => {
     if (error) {
@@ -102,7 +94,7 @@ const Currencies: FC = () => {
   }, [error, dispatch]);
 
   const handleRefresh = () => {
-    void dispatch(fetchCurrencies(!showActiveOnly));
+    void dispatch(fetchCurrencies());
   };
 
   const handleOpenSyncDialog = () => {
@@ -131,10 +123,6 @@ const Currencies: FC = () => {
     setSnackbarOpen(false);
   };
 
-  const filteredCurrencies = showActiveOnly
-    ? currencies.filter((c) => c.isActive)
-    : currencies;
-
   // Handle row click to navigate to currency detail
   const handleRowClick = (currency: Currency) => {
     navigate(`/currencies/${currency.code}`);
@@ -161,25 +149,6 @@ const Currencies: FC = () => {
           {currency.symbol}
         </Typography>
       ),
-    },
-    {
-      label: 'Status',
-      render: (currency) =>
-        currency.isActive ? (
-          <Chip
-            icon={<CheckCircleIcon />}
-            label="Active"
-            color="success"
-            size="small"
-          />
-        ) : (
-          <Chip icon={<CancelIcon />} label="Inactive" color="default" size="small" />
-        ),
-      align: 'center',
-    },
-    {
-      label: 'Last Updated',
-      render: (currency) => formatDateShort(currency.updatedAt),
     },
   ];
 
@@ -231,23 +200,13 @@ const Currencies: FC = () => {
         </Box>
       </Box>
 
-      <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <FormControlLabel
-          control={
-            <Switch
-              checked={showActiveOnly}
-              onChange={(e) => setShowActiveOnly(e.target.checked)}
-              data-testid="active-only-switch"
-            />
-          }
-          label="Show active currencies only"
-        />
-        {syncStatus.lastSync && (
+      {syncStatus.lastSync && (
+        <Box sx={{ mb: 3, display: 'flex', justifyContent: 'flex-end' }}>
           <Typography variant="body2" color="text.secondary">
             Last synced: {formatDateShort(syncStatus.lastSync)}
           </Typography>
-        )}
-      </Box>
+        </Box>
+      )}
 
       {error && (
         <Alert severity="error" sx={{ mb: 3 }} data-testid="error-alert">
@@ -256,16 +215,12 @@ const Currencies: FC = () => {
       )}
 
       <DataTable<Currency>
-        data={filteredCurrencies}
+        data={currencies}
         columns={currencyColumns}
         isLoading={loading && currencies.length === 0}
-        emptyMessage={
-          showActiveOnly
-            ? 'No active currencies available. Try showing all currencies.'
-            : 'No currencies in the system.'
-        }
+        emptyMessage="No currencies in the system."
         onRowClick={handleRowClick}
-        getRowKey={(currency) => currency.id}
+        getRowKey={(currency) => currency.code}
       />
 
       {/* Add Currency Dialog */}

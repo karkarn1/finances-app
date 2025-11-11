@@ -53,9 +53,10 @@ export const accountCreateSchema = z.object({
     .max(100, 'Interest rate cannot exceed 100%')
     .optional(),
 
-  currency_id: z
+  currency_code: z
     .string()
-    .uuid('Invalid currency ID')
+    .length(3, 'Currency code must be exactly 3 characters')
+    .toUpperCase()
     .optional(),
 });
 
@@ -91,9 +92,10 @@ export const accountUpdateSchema = z.object({
     .nullable()
     .optional(),
 
-  currency_id: z
+  currency_code: z
     .string()
-    .uuid('Invalid currency ID')
+    .length(3, 'Currency code must be exactly 3 characters')
+    .toUpperCase()
     .nullable()
     .optional(),
 });

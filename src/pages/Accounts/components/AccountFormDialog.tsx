@@ -16,7 +16,7 @@ import {
   Checkbox,
   Box,
 } from '@mui/material';
-import type { AccountCreate, AccountType, FinancialInstitution, Currency } from '@/types';
+import type { AccountCreate, AccountType, FinancialInstitution } from '@/types';
 import CurrencySelector from '@/components/CurrencySelector';
 
 interface AccountFormDialogProps {
@@ -27,7 +27,6 @@ interface AccountFormDialogProps {
   isEditing: boolean;
   isSubmitting: boolean;
   financialInstitutions: FinancialInstitution[];
-  currencies: Currency[];
 }
 
 const ACCOUNT_TYPES: { value: AccountType; label: string }[] = [
@@ -51,7 +50,6 @@ export const AccountFormDialog: FC<AccountFormDialogProps> = ({
   isEditing,
   isSubmitting,
   financialInstitutions,
-  currencies,
 }) => {
   const [formData, setFormData] = useState<AccountCreate>(initialData);
   const [formErrors, setFormErrors] = useState<{
@@ -192,20 +190,13 @@ export const AccountFormDialog: FC<AccountFormDialogProps> = ({
             data-testid="interest-rate-input"
           />
           <CurrencySelector
-            value={
-              formData.currency_id
-                ? currencies.find((c) => c.id === formData.currency_id)?.code || null
-                : null
-            }
+            value={formData.currency_code || null}
             onChange={(code) => {
               const newFormData = { ...formData };
               if (code) {
-                const currency = currencies.find((c) => c.code === code);
-                if (currency) {
-                  newFormData.currency_id = currency.id;
-                }
+                newFormData.currency_code = code;
               } else {
-                delete newFormData.currency_id;
+                delete newFormData.currency_code;
               }
               setFormData(newFormData);
             }}

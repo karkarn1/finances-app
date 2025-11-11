@@ -13,6 +13,7 @@ export function formatCurrency(amount: number, currency = 'USD'): string {
 
 /**
  * Format a date to a readable string
+ * @deprecated Use formatDateForDisplay from dateUtils instead
  * @param date - The date to format
  * @returns Formatted date string
  */
@@ -81,6 +82,7 @@ export function formatNumber(value: number, decimals = 2): string {
 
 /**
  * Format a date to short format (e.g., "Jan 15, 2024")
+ * @deprecated Use formatDateForDisplay with DateFormats.SHORT from dateUtils instead
  * @param date - The date to format
  * @returns Formatted date string
  */
@@ -98,3 +100,6 @@ export { logger } from './logger';
 
 // Export type guards
 export * from './typeGuards';
+
+// Export comprehensive date utilities (timezone-aware)
+export * from './dateUtils';

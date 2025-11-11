@@ -46,7 +46,6 @@ import {
   fetchFinancialInstitutions,
   selectAllInstitutions,
 } from '@/store/slices/financialInstitutionsSlice';
-import { selectAllCurrencies } from '@/store/slices/currenciesSlice';
 import type { AccountDetailed, AccountCreate } from '@/types';
 import { formatCurrency, getAccountTypeLabel } from '@/utils';
 import { AccountFormDialog } from './components';
@@ -60,7 +59,6 @@ const Accounts: FC = () => {
   const liabilityAccounts = useAppSelector(selectLiabilityAccounts);
   const loading = useAppSelector(selectAccountsLoading);
   const institutions = useAppSelector(selectAllInstitutions);
-  const currencies = useAppSelector(selectAllCurrencies);
 
   // Initial form data
   const initialAccountData: AccountCreate = {
@@ -88,7 +86,7 @@ const Accounts: FC = () => {
           is_investment_account: data.is_investment_account,
         }),
         ...(data.interest_rate !== undefined && { interest_rate: data.interest_rate }),
-        ...(data.currency_id && { currency_id: data.currency_id }),
+        ...(data.currency_code && { currency_code: data.currency_code }),
       };
 
       if (accountDialog.isEditing && accountDialog.editingId) {
@@ -127,7 +125,7 @@ const Accounts: FC = () => {
           }),
           is_investment_account: account.is_investment_account,
           ...(account.interest_rate !== undefined && { interest_rate: account.interest_rate }),
-          ...(account.currency_id && { currency_id: account.currency_id }),
+          ...(account.currency_code && { currency_code: account.currency_code }),
         },
         account.id
       );
@@ -325,7 +323,6 @@ const Accounts: FC = () => {
         isEditing={accountDialog.isEditing}
         isSubmitting={isSubmitting}
         financialInstitutions={institutions}
-        currencies={currencies}
       />
 
       {/* Delete Confirmation Dialog */}

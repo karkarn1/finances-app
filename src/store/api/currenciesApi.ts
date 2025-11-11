@@ -104,7 +104,6 @@ export const currenciesApi = baseApi.injectEndpoints({
           code: data.code,
           name: data.name,
           symbol: data.symbol,
-          is_active: data.isActive ?? true,
         },
       }),
       transformResponse: (response: RawCurrencyResponse) => toCamelCase(response),
@@ -116,10 +115,9 @@ export const currenciesApi = baseApi.injectEndpoints({
      */
     updateCurrency: builder.mutation<Currency, { code: string; data: CurrencyUpdate }>({
       query: ({ code, data }) => {
-        const requestBody: Record<string, string | boolean> = {};
+        const requestBody: Record<string, string> = {};
         if (data.name !== undefined) requestBody['name'] = data.name;
         if (data.symbol !== undefined) requestBody['symbol'] = data.symbol;
-        if (data.isActive !== undefined) requestBody['is_active'] = data.isActive;
 
         return {
           url: `currencies/${code}`,

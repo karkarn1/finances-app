@@ -58,7 +58,6 @@ const Accounts: FC = () => {
   // RTK Query hooks for data fetching
   const { data: accounts = [], isLoading: loading } = useGetAccountsQuery();
   const { data: institutions = [] } = useGetFinancialInstitutionsQuery();
-  const { data: currencies = [] } = useGetCurrenciesQuery(true);
 
   // RTK Query mutation hooks
   const [createAccount] = useCreateAccountMutation();
@@ -113,7 +112,7 @@ const Accounts: FC = () => {
           is_investment_account: data.is_investment_account,
         }),
         ...(data.interest_rate !== undefined && { interest_rate: data.interest_rate }),
-        ...(data.currency_id && { currency_id: data.currency_id }),
+        ...(data.currency_code && { currency_code: data.currency_code }),
       };
 
       if (accountDialog.isEditing && accountDialog.editingId) {
@@ -145,7 +144,7 @@ const Accounts: FC = () => {
           }),
           is_investment_account: account.is_investment_account,
           ...(account.interest_rate !== undefined && { interest_rate: account.interest_rate }),
-          ...(account.currency_id && { currency_id: account.currency_id }),
+          ...(account.currency_code && { currency_code: account.currency_code }),
         },
         account.id
       );
@@ -343,7 +342,6 @@ const Accounts: FC = () => {
         isEditing={accountDialog.isEditing}
         isSubmitting={isSubmitting}
         financialInstitutions={institutions}
-        currencies={currencies}
       />
 
       {/* Delete Confirmation Dialog */}
