@@ -10,22 +10,24 @@ import type {
 import type { RootState } from '@/store';
 import * as accountsService from '@/services/accounts';
 import { ApiErrorClass } from '@/services/api';
-import { formatErrorMessage } from '@/utils/errorHandler';
+import { createAsyncReducers, initialAsyncState } from '@/store/utils/asyncHelpers';
 
 interface AccountsState {
   accounts: AccountDetailed[];
   selectedAccount: AccountDetailed | null;
   accountValues: AccountValue[];
-  loading: boolean;
+  isLoading: boolean;
   error: string | null;
 }
+
+// Create async helpers for this slice
+const asyncHelpers = createAsyncReducers<AccountsState>('accounts');
 
 const initialState: AccountsState = {
   accounts: [],
   selectedAccount: null,
   accountValues: [],
-  loading: false,
-  error: null,
+  ...initialAsyncState,
 };
 
 // Account async thunks
@@ -188,25 +190,16 @@ const accountsSlice = createSlice({
   extraReducers: (builder) => {
     builder
       // Fetch all accounts
-      .addCase(fetchAccounts.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
+      .addCase(fetchAccounts.pending, asyncHelpers.pending)
       .addCase(fetchAccounts.fulfilled, (state, action) => {
-        state.loading = false;
+        asyncHelpers.fulfilled(state);
         state.accounts = action.payload;
       })
-      .addCase(fetchAccounts.rejected, (state, action) => {
-        state.loading = false;
-        state.error = formatErrorMessage(action.error);
-      })
+      .addCase(fetchAccounts.rejected, asyncHelpers.rejected)
       // Fetch account by ID
-      .addCase(fetchAccountById.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
+      .addCase(fetchAccountById.pending, asyncHelpers.pending)
       .addCase(fetchAccountById.fulfilled, (state, action) => {
-        state.loading = false;
+        asyncHelpers.fulfilled(state);
         state.selectedAccount = action.payload;
         // Update in list if exists
         const index = state.accounts.findIndex((a) => a.id === action.payload.id);
@@ -216,30 +209,18 @@ const accountsSlice = createSlice({
           state.accounts.push(action.payload);
         }
       })
-      .addCase(fetchAccountById.rejected, (state, action) => {
-        state.loading = false;
-        state.error = formatErrorMessage(action.error);
-      })
+      .addCase(fetchAccountById.rejected, asyncHelpers.rejected)
       // Create account
-      .addCase(createAccount.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
+      .addCase(createAccount.pending, asyncHelpers.pending)
       .addCase(createAccount.fulfilled, (state, action) => {
-        state.loading = false;
+        asyncHelpers.fulfilled(state);
         state.accounts.push(action.payload);
       })
-      .addCase(createAccount.rejected, (state, action) => {
-        state.loading = false;
-        state.error = formatErrorMessage(action.error);
-      })
+      .addCase(createAccount.rejected, asyncHelpers.rejected)
       // Update account
-      .addCase(updateAccount.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
+      .addCase(updateAccount.pending, asyncHelpers.pending)
       .addCase(updateAccount.fulfilled, (state, action) => {
-        state.loading = false;
+        asyncHelpers.fulfilled(state);
         const index = state.accounts.findIndex((a) => a.id === action.payload.id);
         if (index !== -1) {
           state.accounts[index] = action.payload;
@@ -248,81 +229,48 @@ const accountsSlice = createSlice({
           state.selectedAccount = action.payload;
         }
       })
-      .addCase(updateAccount.rejected, (state, action) => {
-        state.loading = false;
-        state.error = formatErrorMessage(action.error);
-      })
+      .addCase(updateAccount.rejected, asyncHelpers.rejected)
       // Delete account
-      .addCase(deleteAccount.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
+      .addCase(deleteAccount.pending, asyncHelpers.pending)
       .addCase(deleteAccount.fulfilled, (state, action) => {
-        state.loading = false;
+        asyncHelpers.fulfilled(state);
         state.accounts = state.accounts.filter((a) => a.id !== action.payload);
         if (state.selectedAccount?.id === action.payload) {
           state.selectedAccount = null;
         }
       })
-      .addCase(deleteAccount.rejected, (state, action) => {
-        state.loading = false;
-        state.error = formatErrorMessage(action.error);
-      })
+      .addCase(deleteAccount.rejected, asyncHelpers.rejected)
       // Fetch account values
-      .addCase(fetchAccountValues.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
+      .addCase(fetchAccountValues.pending, asyncHelpers.pending)
       .addCase(fetchAccountValues.fulfilled, (state, action) => {
-        state.loading = false;
+        asyncHelpers.fulfilled(state);
         state.accountValues = action.payload;
       })
-      .addCase(fetchAccountValues.rejected, (state, action) => {
-        state.loading = false;
-        state.error = formatErrorMessage(action.error);
-      })
+      .addCase(fetchAccountValues.rejected, asyncHelpers.rejected)
       // Create account value
-      .addCase(createAccountValue.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
+      .addCase(createAccountValue.pending, asyncHelpers.pending)
       .addCase(createAccountValue.fulfilled, (state, action) => {
-        state.loading = false;
+        asyncHelpers.fulfilled(state);
         state.accountValues.push(action.payload);
       })
-      .addCase(createAccountValue.rejected, (state, action) => {
-        state.loading = false;
-        state.error = formatErrorMessage(action.error);
-      })
+      .addCase(createAccountValue.rejected, asyncHelpers.rejected)
       // Update account value
-      .addCase(updateAccountValue.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
+      .addCase(updateAccountValue.pending, asyncHelpers.pending)
       .addCase(updateAccountValue.fulfilled, (state, action) => {
-        state.loading = false;
+        asyncHelpers.fulfilled(state);
         const index = state.accountValues.findIndex((v) => v.id === action.payload.id);
         if (index !== -1) {
           state.accountValues[index] = action.payload;
         }
       })
-      .addCase(updateAccountValue.rejected, (state, action) => {
-        state.loading = false;
-        state.error = formatErrorMessage(action.error);
-      })
+      .addCase(updateAccountValue.rejected, asyncHelpers.rejected)
       // Delete account value
-      .addCase(deleteAccountValue.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
+      .addCase(deleteAccountValue.pending, asyncHelpers.pending)
       .addCase(deleteAccountValue.fulfilled, (state, action) => {
-        state.loading = false;
+        asyncHelpers.fulfilled(state);
         state.accountValues = state.accountValues.filter((v) => v.id !== action.payload);
       })
-      .addCase(deleteAccountValue.rejected, (state, action) => {
-        state.loading = false;
-        state.error = formatErrorMessage(action.error);
-      });
+      .addCase(deleteAccountValue.rejected, asyncHelpers.rejected);
   },
 });
 
@@ -332,7 +280,7 @@ export const { clearError, setSelectedAccount, clearAccountValues } = accountsSl
 export const selectAllAccounts = (state: RootState) => state.accounts.accounts;
 export const selectSelectedAccount = (state: RootState) => state.accounts.selectedAccount;
 export const selectAccountValues = (state: RootState) => state.accounts.accountValues;
-export const selectAccountsLoading = (state: RootState) => state.accounts.loading;
+export const selectAccountsLoading = (state: RootState) => state.accounts.isLoading;
 export const selectAccountsError = (state: RootState) => state.accounts.error;
 
 // Derived selectors

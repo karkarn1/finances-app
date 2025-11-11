@@ -7,19 +7,24 @@ import type { RootState } from '@/store';
 import type { Security, PriceData, Timeframe, DataCompleteness } from '@/types';
 import * as securitiesApi from '@/services/securities';
 import { getTimeframeRange } from '@/utils/timeframes';
-import { formatErrorMessage } from '@/utils/errorHandler';
+import {
+  createAsyncReducersWithKey,
+  initialAsyncState,
+  MultiLoadingAsyncState,
+} from '@/store/utils/asyncHelpers';
 
-interface SecuritiesState {
+interface SecuritiesState extends MultiLoadingAsyncState {
   searchResults: Security[];
   selectedSecurity: Security | null;
   prices: PriceData[];
   currentTimeframe: Timeframe;
+  isLoading: boolean;
   isSearching: boolean;
   isLoadingSecurity: boolean;
   isLoadingPrices: boolean;
   isSyncing: boolean;
   error: string | null;
-  // NEW: Price data metadata
+  // Price data metadata
   priceMetadata: {
     requestedStart: string | null;
     requestedEnd: string | null;
@@ -29,16 +34,22 @@ interface SecuritiesState {
   };
 }
 
+// Create specific helpers for each loading state
+const searchHelpers = createAsyncReducersWithKey<SecuritiesState>('isSearching');
+const securityHelpers = createAsyncReducersWithKey<SecuritiesState>('isLoadingSecurity');
+const pricesHelpers = createAsyncReducersWithKey<SecuritiesState>('isLoadingPrices');
+const syncHelpers = createAsyncReducersWithKey<SecuritiesState>('isSyncing');
+
 const initialState: SecuritiesState = {
   searchResults: [],
   selectedSecurity: null,
   prices: [],
   currentTimeframe: '1M',
+  ...initialAsyncState,
   isSearching: false,
   isLoadingSecurity: false,
   isLoadingPrices: false,
   isSyncing: false,
-  error: null,
   priceMetadata: {
     requestedStart: null,
     requestedEnd: null,
@@ -130,66 +141,42 @@ const securitiesSlice = createSlice({
   extraReducers: (builder) => {
     // Search securities
     builder
-      .addCase(searchSecuritiesAsync.pending, (state) => {
-        state.isSearching = true;
-        state.error = null;
-      })
+      .addCase(searchSecuritiesAsync.pending, searchHelpers.pending)
       .addCase(searchSecuritiesAsync.fulfilled, (state, action) => {
-        state.isSearching = false;
+        searchHelpers.fulfilled(state);
         state.searchResults = action.payload;
       })
-      .addCase(searchSecuritiesAsync.rejected, (state, action) => {
-        state.isSearching = false;
-        state.error = formatErrorMessage(action.error);
-      });
+      .addCase(searchSecuritiesAsync.rejected, searchHelpers.rejected);
 
     // Fetch security
     builder
-      .addCase(fetchSecurityAsync.pending, (state) => {
-        state.isLoadingSecurity = true;
-        state.error = null;
-      })
+      .addCase(fetchSecurityAsync.pending, securityHelpers.pending)
       .addCase(fetchSecurityAsync.fulfilled, (state, action) => {
-        state.isLoadingSecurity = false;
+        securityHelpers.fulfilled(state);
         state.selectedSecurity = action.payload;
       })
-      .addCase(fetchSecurityAsync.rejected, (state, action) => {
-        state.isLoadingSecurity = false;
-        state.error = formatErrorMessage(action.error);
-      });
+      .addCase(fetchSecurityAsync.rejected, securityHelpers.rejected);
 
     // Sync security
     builder
-      .addCase(syncSecurityAsync.pending, (state) => {
-        state.isSyncing = true;
-        state.error = null;
-      })
+      .addCase(syncSecurityAsync.pending, syncHelpers.pending)
       .addCase(syncSecurityAsync.fulfilled, (state, action) => {
-        state.isSyncing = false;
+        syncHelpers.fulfilled(state);
         state.selectedSecurity = action.payload.security;
       })
-      .addCase(syncSecurityAsync.rejected, (state, action) => {
-        state.isSyncing = false;
-        state.error = formatErrorMessage(action.error);
-      });
+      .addCase(syncSecurityAsync.rejected, syncHelpers.rejected);
 
     // Fetch prices
     builder
-      .addCase(fetchPricesAsync.pending, (state) => {
-        state.isLoadingPrices = true;
-        state.error = null;
-      })
+      .addCase(fetchPricesAsync.pending, pricesHelpers.pending)
       .addCase(fetchPricesAsync.fulfilled, (state, action) => {
-        state.isLoadingPrices = false;
+        pricesHelpers.fulfilled(state);
         state.prices = action.payload.prices;
         state.currentTimeframe = action.payload.timeframe;
-        // NEW: Store metadata
+        // Store metadata
         state.priceMetadata = action.payload.metadata;
       })
-      .addCase(fetchPricesAsync.rejected, (state, action) => {
-        state.isLoadingPrices = false;
-        state.error = formatErrorMessage(action.error);
-      });
+      .addCase(fetchPricesAsync.rejected, pricesHelpers.rejected);
   },
 });
 

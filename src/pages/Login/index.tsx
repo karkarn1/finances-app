@@ -2,13 +2,12 @@
  * Login page component
  */
 
-import { FC, useState, FormEvent, useEffect } from 'react';
+import { FC, useEffect } from 'react';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import {
   Box,
   Card,
   CardContent,
-  TextField,
   Button,
   Typography,
   Alert,
@@ -16,7 +15,7 @@ import {
   Link,
   Container,
 } from '@mui/material';
-import { useAppDispatch, useAppSelector } from '@/hooks';
+import { useAppDispatch, useAppSelector, useZodForm } from '@/hooks';
 import {
   loginUser,
   selectIsAuthenticated,
@@ -24,6 +23,8 @@ import {
   selectError,
   clearError,
 } from '@/store/slices/authSlice';
+import { loginSchema, type LoginInput } from '@/schemas';
+import { FormTextField } from '@/components/Form';
 
 const Login: FC = () => {
   const navigate = useNavigate();
@@ -33,9 +34,13 @@ const Login: FC = () => {
   const isLoading = useAppSelector(selectIsLoading);
   const error = useAppSelector(selectError);
 
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [validationError, setValidationError] = useState('');
+  // Initialize form with Zod validation
+  const { control, handleSubmit } = useZodForm(loginSchema, {
+    defaultValues: {
+      username: '',
+      password: '',
+    },
+  });
 
   // Redirect to dashboard if already authenticated
   useEffect(() => {
@@ -51,23 +56,9 @@ const Login: FC = () => {
     };
   }, [dispatch]);
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setValidationError('');
-
-    // Validation
-    if (!username.trim()) {
-      setValidationError('Email or username is required');
-      return;
-    }
-
-    if (!password) {
-      setValidationError('Password is required');
-      return;
-    }
-
+  const onSubmit = (data: LoginInput) => {
     // Dispatch login action
-    void dispatch(loginUser({ username, password })).then((result) => {
+    void dispatch(loginUser(data)).then((result) => {
       // Navigate to dashboard on success
       if (loginUser.fulfilled.match(result)) {
         navigate('/dashboard');
@@ -107,19 +98,18 @@ const Login: FC = () => {
               Sign in to manage your finances
             </Typography>
 
-            {(error || validationError) && (
+            {error && (
               <Alert severity="error" sx={{ mb: 3 }}>
-                {validationError || error}
+                {error}
               </Alert>
             )}
 
-            <Box component="form" onSubmit={handleSubmit} noValidate>
-              <TextField
-                fullWidth
+            <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate>
+              <FormTextField
+                name="username"
+                control={control}
                 label="Email or Username"
                 type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
                 disabled={isLoading}
                 required
                 autoComplete="username"
@@ -127,12 +117,11 @@ const Login: FC = () => {
                 sx={{ mb: 2 }}
               />
 
-              <TextField
-                fullWidth
+              <FormTextField
+                name="password"
+                control={control}
                 label="Password"
                 type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
                 disabled={isLoading}
                 required
                 autoComplete="current-password"

@@ -2,35 +2,7 @@ import { Container, Typography, Box, Grid, Card, CardContent } from '@mui/materi
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
-
-interface MetricCardProps {
-  title: string;
-  value: string;
-  icon: React.ReactNode;
-  color: string;
-}
-
-function MetricCard({ title, value, icon, color }: MetricCardProps) {
-  return (
-    <Card>
-      <CardContent>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Box>
-            <Typography variant="body2" color="text.secondary" gutterBottom>
-              {title}
-            </Typography>
-            <Typography variant="h4" component="div">
-              {value}
-            </Typography>
-          </Box>
-          <Box sx={{ color, fontSize: '3rem' }}>
-            {icon}
-          </Box>
-        </Box>
-      </CardContent>
-    </Card>
-  );
-}
+import { MetricCard } from '@/components';
 
 function Dashboard() {
   return (

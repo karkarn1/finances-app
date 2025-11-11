@@ -3,17 +3,17 @@ import type { Holding, HoldingCreate, HoldingUpdate } from '@/types';
 import type { RootState } from '@/store';
 import * as holdingsService from '@/services/holdings';
 import { ApiErrorClass } from '@/services/api';
+import { createAsyncReducers, initialAsyncState } from '@/store/utils/asyncHelpers';
 
 interface HoldingsState {
   holdings: Holding[];
-  loading: boolean;
+  isLoading: boolean;
   error: string | null;
 }
 
 const initialState: HoldingsState = {
   holdings: [],
-  loading: false,
-  error: null,
+  ...initialAsyncState,
 };
 
 // Async thunks
@@ -96,6 +96,9 @@ export const deleteHolding = createAsyncThunk<
   }
 });
 
+// Create async helpers
+const asyncHelpers = createAsyncReducers<HoldingsState>('holdings');
+
 // Slice
 const holdingsSlice = createSlice({
   name: 'holdings',
@@ -111,25 +114,16 @@ const holdingsSlice = createSlice({
   extraReducers: (builder) => {
     builder
       // Fetch all
-      .addCase(fetchHoldings.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
+      .addCase(fetchHoldings.pending, asyncHelpers.pending)
       .addCase(fetchHoldings.fulfilled, (state, action) => {
-        state.loading = false;
+        asyncHelpers.fulfilled(state);
         state.holdings = action.payload;
       })
-      .addCase(fetchHoldings.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload || 'Failed to fetch holdings';
-      })
+      .addCase(fetchHoldings.rejected, asyncHelpers.rejected)
       // Fetch by ID
-      .addCase(fetchHoldingById.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
+      .addCase(fetchHoldingById.pending, asyncHelpers.pending)
       .addCase(fetchHoldingById.fulfilled, (state, action) => {
-        state.loading = false;
+        asyncHelpers.fulfilled(state);
         const index = state.holdings.findIndex((h) => h.id === action.payload.id);
         if (index !== -1) {
           state.holdings[index] = action.payload;
@@ -137,52 +131,31 @@ const holdingsSlice = createSlice({
           state.holdings.push(action.payload);
         }
       })
-      .addCase(fetchHoldingById.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload || 'Failed to fetch holding';
-      })
+      .addCase(fetchHoldingById.rejected, asyncHelpers.rejected)
       // Create
-      .addCase(createHolding.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
+      .addCase(createHolding.pending, asyncHelpers.pending)
       .addCase(createHolding.fulfilled, (state, action) => {
-        state.loading = false;
+        asyncHelpers.fulfilled(state);
         state.holdings.push(action.payload);
       })
-      .addCase(createHolding.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload || 'Failed to create holding';
-      })
+      .addCase(createHolding.rejected, asyncHelpers.rejected)
       // Update
-      .addCase(updateHolding.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
+      .addCase(updateHolding.pending, asyncHelpers.pending)
       .addCase(updateHolding.fulfilled, (state, action) => {
-        state.loading = false;
+        asyncHelpers.fulfilled(state);
         const index = state.holdings.findIndex((h) => h.id === action.payload.id);
         if (index !== -1) {
           state.holdings[index] = action.payload;
         }
       })
-      .addCase(updateHolding.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload || 'Failed to update holding';
-      })
+      .addCase(updateHolding.rejected, asyncHelpers.rejected)
       // Delete
-      .addCase(deleteHolding.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
+      .addCase(deleteHolding.pending, asyncHelpers.pending)
       .addCase(deleteHolding.fulfilled, (state, action) => {
-        state.loading = false;
+        asyncHelpers.fulfilled(state);
         state.holdings = state.holdings.filter((h) => h.id !== action.payload);
       })
-      .addCase(deleteHolding.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload || 'Failed to delete holding';
-      });
+      .addCase(deleteHolding.rejected, asyncHelpers.rejected);
   },
 });
 
@@ -190,7 +163,7 @@ export const { clearError, clearHoldings } = holdingsSlice.actions;
 
 // Selectors
 export const selectAllHoldings = (state: RootState) => state.holdings.holdings;
-export const selectHoldingsLoading = (state: RootState) => state.holdings.loading;
+export const selectHoldingsLoading = (state: RootState) => state.holdings.isLoading;
 export const selectHoldingsError = (state: RootState) => state.holdings.error;
 
 export default holdingsSlice.reducer;

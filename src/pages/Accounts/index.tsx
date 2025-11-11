@@ -1,8 +1,15 @@
 /**
- * Accounts Page - Manage accounts
+ * Accounts Page - Manage accounts (RTK Query version)
+ *
+ * Updated to use RTK Query hooks instead of Redux Toolkit async thunks.
+ * Benefits:
+ * - Automatic caching and request deduplication
+ * - Simplified loading and error state management
+ * - Optimistic updates support
+ * - Reduced boilerplate code
  */
 
-import { FC, useState, useEffect } from 'react';
+import { FC, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -20,10 +27,6 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  TextField,
-  MenuItem,
-  FormControlLabel,
-  Checkbox,
   Tooltip,
   Chip,
 } from '@mui/material';
@@ -34,49 +37,55 @@ import {
   AccountBalance as AccountBalanceIcon,
   TrendingUp as TrendingUpIcon,
 } from '@mui/icons-material';
-import { useAppDispatch, useAppSelector, useDialog, useFormSubmit } from '@/hooks';
+import { useDialog, useFormSubmit } from '@/hooks';
 import { errorService } from '@/services/errorService';
 import {
-  fetchAccounts,
-  createAccount,
-  updateAccount,
-  deleteAccount,
-  selectAllAccounts,
-  selectAssetAccounts,
-  selectLiabilityAccounts,
-  selectAccountsLoading,
-} from '@/store/slices/accountsSlice';
-import {
-  fetchFinancialInstitutions,
-  selectAllInstitutions,
-} from '@/store/slices/financialInstitutionsSlice';
-import { selectAllCurrencies } from '@/store/slices/currenciesSlice';
-import type { AccountDetailed, AccountCreate, AccountType } from '@/types';
+  useGetAccountsQuery,
+  useCreateAccountMutation,
+  useUpdateAccountMutation,
+  useDeleteAccountMutation,
+} from '@/store/api';
+import { useGetFinancialInstitutionsQuery } from '@/store/api';
+import { useGetCurrenciesQuery } from '@/store/api';
+import type { AccountDetailed, AccountCreate } from '@/types';
 import { formatCurrency, getAccountTypeLabel } from '@/utils';
-import CurrencySelector from '@/components/CurrencySelector';
-
-const ACCOUNT_TYPES: { value: AccountType; label: string }[] = [
-  { value: 'checking', label: 'Checking' },
-  { value: 'savings', label: 'Savings' },
-  { value: 'tfsa', label: 'TFSA' },
-  { value: 'rrsp', label: 'RRSP' },
-  { value: 'fhsa', label: 'FHSA' },
-  { value: 'margin', label: 'Margin' },
-  { value: 'credit_card', label: 'Credit Card' },
-  { value: 'line_of_credit', label: 'Line of Credit' },
-  { value: 'payment_plan', label: 'Payment Plan' },
-  { value: 'mortgage', label: 'Mortgage' },
-];
+import { AccountFormDialog } from './components';
+import { logger } from '@/utils/logger';
 
 const Accounts: FC = () => {
   const navigate = useNavigate();
-  const dispatch = useAppDispatch();
-  const accounts = useAppSelector(selectAllAccounts);
-  const assetAccounts = useAppSelector(selectAssetAccounts);
-  const liabilityAccounts = useAppSelector(selectLiabilityAccounts);
-  const loading = useAppSelector(selectAccountsLoading);
-  const institutions = useAppSelector(selectAllInstitutions);
-  const currencies = useAppSelector(selectAllCurrencies);
+
+  // RTK Query hooks for data fetching
+  const { data: accounts = [], isLoading: loading } = useGetAccountsQuery();
+  const { data: institutions = [] } = useGetFinancialInstitutionsQuery();
+  const { data: currencies = [] } = useGetCurrenciesQuery(true);
+
+  // RTK Query mutation hooks
+  const [createAccount] = useCreateAccountMutation();
+  const [updateAccount] = useUpdateAccountMutation();
+  const [deleteAccount] = useDeleteAccountMutation();
+
+  // Derived data using useMemo to prevent unnecessary recalculations
+  const assetAccounts = useMemo(
+    () =>
+      accounts.filter(
+        (a) =>
+          !['credit_card', 'line_of_credit', 'payment_plan', 'mortgage'].includes(
+            a.account_type
+          )
+      ),
+    [accounts]
+  );
+
+  const liabilityAccounts = useMemo(
+    () =>
+      accounts.filter((a) =>
+        ['credit_card', 'line_of_credit', 'payment_plan', 'mortgage'].includes(
+          a.account_type
+        )
+      ),
+    [accounts]
+  );
 
   // Initial form data
   const initialAccountData: AccountCreate = {
@@ -86,31 +95,10 @@ const Accounts: FC = () => {
   };
 
   // Dialog management for add/edit account
-  const {
-    open: dialogOpen,
-    data: formData,
-    isEditing,
-    openDialog: openAccountDialog,
-    closeDialog: closeAccountDialog,
-    setData: setFormData,
-  } = useDialog<AccountCreate>(initialAccountData);
-
-  // Track which account is being edited (need ID for update)
-  const [editingAccountId, setEditingAccountId] = useState<string | null>(null);
+  const accountDialog = useDialog<AccountCreate>(initialAccountData);
 
   // Dialog management for delete confirmation
-  const {
-    open: deleteDialogOpen,
-    data: deletingAccount,
-    openDialog: openDeleteDialog,
-    closeDialog: closeDeleteDialog,
-  } = useDialog<AccountDetailed | null>(null);
-
-  // Form validation errors (not moved to hook as validation is specific to this form)
-  const [formErrors, setFormErrors] = useState<{
-    name?: string;
-    interest_rate?: string;
-  }>({});
+  const deleteDialog = useDialog<AccountDetailed | null>(null);
 
   // Form submission with loading/error handling
   const { handleSubmit: submitAccount, isSubmitting } = useFormSubmit(
@@ -128,107 +116,62 @@ const Accounts: FC = () => {
         ...(data.currency_id && { currency_id: data.currency_id }),
       };
 
-      if (isEditing && editingAccountId) {
-        await dispatch(
-          updateAccount({
-            id: editingAccountId,
-            data: submitData,
-          })
-        ).unwrap();
+      if (accountDialog.isEditing && accountDialog.editingId) {
+        await updateAccount({
+          id: accountDialog.editingId,
+          data: submitData,
+        }).unwrap();
         errorService.showSuccess('Account updated successfully');
       } else {
-        await dispatch(createAccount(submitData)).unwrap();
+        await createAccount(submitData).unwrap();
         errorService.showSuccess('Account created successfully');
       }
     },
     () => {
-      handleCloseDialog();
-      void dispatch(fetchAccounts());
+      accountDialog.closeDialog();
+      // No need to manually refetch - RTK Query handles cache invalidation
     }
   );
-
-  useEffect(() => {
-    void dispatch(fetchAccounts());
-    void dispatch(fetchFinancialInstitutions());
-  }, [dispatch]);
 
   const handleOpenDialog = (account?: AccountDetailed) => {
     if (account) {
       // Open dialog with existing account data for editing
-      setEditingAccountId(account.id);
-      openAccountDialog({
-        name: account.name,
-        account_type: account.account_type,
-        ...(account.financial_institution_id && {
-          financial_institution_id: account.financial_institution_id,
-        }),
-        is_investment_account: account.is_investment_account,
-        ...(account.interest_rate !== undefined && { interest_rate: account.interest_rate }),
-        ...(account.currency_id && { currency_id: account.currency_id }),
-      });
+      accountDialog.openDialog(
+        {
+          name: account.name,
+          account_type: account.account_type,
+          ...(account.financial_institution_id && {
+            financial_institution_id: account.financial_institution_id,
+          }),
+          is_investment_account: account.is_investment_account,
+          ...(account.interest_rate !== undefined && { interest_rate: account.interest_rate }),
+          ...(account.currency_id && { currency_id: account.currency_id }),
+        },
+        account.id
+      );
     } else {
       // Open dialog for creating new account
-      setEditingAccountId(null);
-      openAccountDialog();
+      accountDialog.openDialog();
     }
-    setFormErrors({});
-  };
-
-  const handleCloseDialog = () => {
-    setEditingAccountId(null);
-    closeAccountDialog();
-    setFormErrors({});
-  };
-
-  const validateForm = (): boolean => {
-    const errors: { name?: string; interest_rate?: string } = {};
-
-    if (!formData.name.trim()) {
-      errors.name = 'Name is required';
-      setFormErrors(errors);
-      return false;
-    }
-
-    if (
-      formData.interest_rate !== undefined &&
-      formData.interest_rate !== null &&
-      (isNaN(formData.interest_rate) || formData.interest_rate < 0 || formData.interest_rate > 100)
-    ) {
-      errors.interest_rate = 'Interest rate must be between 0 and 100';
-      setFormErrors(errors);
-      return false;
-    }
-
-    setFormErrors(errors);
-    return true;
-  };
-
-  const handleSubmit = () => {
-    if (!validateForm()) {
-      return;
-    }
-    void submitAccount(formData);
   };
 
   const handleOpenDeleteDialog = (account: AccountDetailed) => {
-    openDeleteDialog(account);
-  };
-
-  const handleCloseDeleteDialog = () => {
-    closeDeleteDialog();
+    deleteDialog.openDialog(account);
   };
 
   const handleDelete = () => {
-    if (!deletingAccount) return;
+    if (!deleteDialog.data) return;
+
+    const accountToDelete = deleteDialog.data;
 
     void (async () => {
       try {
-        await dispatch(deleteAccount(deletingAccount.id)).unwrap();
+        await deleteAccount(accountToDelete.id).unwrap();
         errorService.showSuccess('Account deleted successfully');
-        handleCloseDeleteDialog();
+        deleteDialog.closeDialog();
       } catch (err) {
         errorService.showError(err, 'Delete account');
-        console.error('Failed to delete account:', err);
+        logger.error('Failed to delete account:', err);
       }
     })();
   };
@@ -392,147 +335,28 @@ const Accounts: FC = () => {
       )}
 
       {/* Add/Edit Dialog */}
-      <Dialog open={dialogOpen} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
-        <DialogTitle>{isEditing ? 'Edit Account' : 'Add Account'}</DialogTitle>
-        <DialogContent>
-          <Box sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <TextField
-              label="Account Name"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              error={!!formErrors.name}
-              helperText={formErrors.name}
-              fullWidth
-              required
-              autoFocus
-              data-testid="account-name-input"
-            />
-            <TextField
-              label="Account Type"
-              value={formData.account_type}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  account_type: e.target.value as AccountType,
-                })
-              }
-              select
-              fullWidth
-              required
-              data-testid="account-type-select"
-            >
-              {ACCOUNT_TYPES.map((type) => (
-                <MenuItem key={type.value} value={type.value}>
-                  {type.label}
-                </MenuItem>
-              ))}
-            </TextField>
-            <TextField
-              label="Financial Institution"
-              value={formData.financial_institution_id || ''}
-              onChange={(e) => {
-                const newFormData = { ...formData };
-                if (e.target.value) {
-                  newFormData.financial_institution_id = e.target.value;
-                } else {
-                  delete newFormData.financial_institution_id;
-                }
-                setFormData(newFormData);
-              }}
-              select
-              fullWidth
-              data-testid="institution-select"
-            >
-              <MenuItem value="">
-                <em>None</em>
-              </MenuItem>
-              {institutions.map((institution) => (
-                <MenuItem key={institution.id} value={institution.id}>
-                  {institution.name}
-                </MenuItem>
-              ))}
-            </TextField>
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={formData.is_investment_account || false}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      is_investment_account: e.target.checked,
-                    })
-                  }
-                  data-testid="investment-account-checkbox"
-                />
-              }
-              label="Investment Account"
-            />
-            <TextField
-              label="Interest Rate (APR %)"
-              type="number"
-              value={formData.interest_rate || ''}
-              onChange={(e) => {
-                const newFormData = { ...formData };
-                if (e.target.value) {
-                  newFormData.interest_rate = parseFloat(e.target.value);
-                } else {
-                  delete newFormData.interest_rate;
-                }
-                setFormData(newFormData);
-              }}
-              error={!!formErrors.interest_rate}
-              helperText={formErrors.interest_rate || 'Optional'}
-              fullWidth
-              inputProps={{ min: 0, max: 100, step: 0.01 }}
-              data-testid="interest-rate-input"
-            />
-            <CurrencySelector
-              value={
-                formData.currency_id
-                  ? currencies.find((c) => c.id === formData.currency_id)?.code || null
-                  : null
-              }
-              onChange={(code) => {
-                const newFormData = { ...formData };
-                if (code) {
-                  const currency = currencies.find((c) => c.code === code);
-                  if (currency) {
-                    newFormData.currency_id = currency.id;
-                  }
-                } else {
-                  delete newFormData.currency_id;
-                }
-                setFormData(newFormData);
-              }}
-              label="Currency"
-              helperText="Optional - defaults to USD"
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDialog}>Cancel</Button>
-          <Button
-            onClick={handleSubmit}
-            variant="contained"
-            disabled={isSubmitting}
-            data-testid="submit-account"
-          >
-            {isEditing ? 'Update' : 'Add'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <AccountFormDialog
+        open={accountDialog.open}
+        onClose={accountDialog.closeDialog}
+        onSubmit={(data) => void submitAccount(data)}
+        initialData={accountDialog.data}
+        isEditing={accountDialog.isEditing}
+        isSubmitting={isSubmitting}
+        financialInstitutions={institutions}
+        currencies={currencies}
+      />
 
       {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteDialogOpen} onClose={handleCloseDeleteDialog}>
+      <Dialog open={deleteDialog.open} onClose={deleteDialog.closeDialog}>
         <DialogTitle>Delete Account?</DialogTitle>
         <DialogContent>
           <Typography>
-            Are you sure you want to delete &quot;{deletingAccount?.name}&quot;? This will also
+            Are you sure you want to delete &quot;{deleteDialog.data?.name}&quot;? This will also
             delete all associated balance history and holdings. This action cannot be undone.
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseDeleteDialog}>Cancel</Button>
+          <Button onClick={deleteDialog.closeDialog}>Cancel</Button>
           <Button
             onClick={handleDelete}
             color="error"

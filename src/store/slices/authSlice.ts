@@ -13,7 +13,7 @@ import type {
 } from '@/types';
 import * as authService from '@/services/auth';
 import { ApiErrorClass } from '@/services/api';
-import { formatErrorMessage } from '@/utils/errorHandler';
+import { createAsyncReducers, initialAsyncState } from '@/store/utils/asyncHelpers';
 
 // Auth state interface
 interface AuthState {
@@ -25,14 +25,16 @@ interface AuthState {
   error: string | null;
 }
 
+// Create async helpers for this slice
+const asyncHelpers = createAsyncReducers<AuthState>('auth');
+
 // Initial state
 const initialState: AuthState = {
   user: null,
   token: localStorage.getItem('auth_token'),
   refreshToken: localStorage.getItem('refresh_token'),
   isAuthenticated: !!localStorage.getItem('auth_token'),
-  isLoading: false,
-  error: null,
+  ...initialAsyncState,
 };
 
 // Async thunks
@@ -190,42 +192,30 @@ const authSlice = createSlice({
   extraReducers: (builder) => {
     // Login
     builder
-      .addCase(loginUser.pending, (state) => {
-        state.isLoading = true;
-        state.error = null;
-      })
+      .addCase(loginUser.pending, asyncHelpers.pending)
       .addCase(loginUser.fulfilled, (state, action) => {
-        state.isLoading = false;
+        asyncHelpers.fulfilled(state);
         state.user = action.payload.user;
         state.token = action.payload.tokens.access_token;
         state.refreshToken = action.payload.tokens.refresh_token;
         state.isAuthenticated = true;
-        state.error = null;
       })
       .addCase(loginUser.rejected, (state, action) => {
-        state.isLoading = false;
-        state.error = formatErrorMessage(action.error);
+        asyncHelpers.rejected(state, action);
         state.isAuthenticated = false;
       });
 
     // Register
     builder
-      .addCase(registerUser.pending, (state) => {
-        state.isLoading = true;
-        state.error = null;
-      })
+      .addCase(registerUser.pending, asyncHelpers.pending)
       .addCase(registerUser.fulfilled, (state, action) => {
-        state.isLoading = false;
+        asyncHelpers.fulfilled(state);
         state.user = action.payload.user;
         state.token = action.payload.tokens.access_token;
         state.refreshToken = action.payload.tokens.refresh_token;
         state.isAuthenticated = true;
-        state.error = null;
       })
-      .addCase(registerUser.rejected, (state, action) => {
-        state.isLoading = false;
-        state.error = formatErrorMessage(action.error);
-      });
+      .addCase(registerUser.rejected, asyncHelpers.rejected);
 
     // Logout
     builder.addCase(logoutUser.fulfilled, (state) => {
@@ -238,18 +228,14 @@ const authSlice = createSlice({
 
     // Fetch current user
     builder
-      .addCase(fetchCurrentUser.pending, (state) => {
-        state.isLoading = true;
-      })
+      .addCase(fetchCurrentUser.pending, asyncHelpers.pending)
       .addCase(fetchCurrentUser.fulfilled, (state, action) => {
-        state.isLoading = false;
+        asyncHelpers.fulfilled(state);
         state.user = action.payload;
         state.isAuthenticated = true;
-        state.error = null;
       })
       .addCase(fetchCurrentUser.rejected, (state, action) => {
-        state.isLoading = false;
-        state.error = formatErrorMessage(action.error);
+        asyncHelpers.rejected(state, action);
         state.user = null;
         state.token = null;
         state.refreshToken = null;
@@ -258,33 +244,15 @@ const authSlice = createSlice({
 
     // Forgot password
     builder
-      .addCase(forgotPassword.pending, (state) => {
-        state.isLoading = true;
-        state.error = null;
-      })
-      .addCase(forgotPassword.fulfilled, (state) => {
-        state.isLoading = false;
-        state.error = null;
-      })
-      .addCase(forgotPassword.rejected, (state, action) => {
-        state.isLoading = false;
-        state.error = formatErrorMessage(action.error);
-      });
+      .addCase(forgotPassword.pending, asyncHelpers.pending)
+      .addCase(forgotPassword.fulfilled, asyncHelpers.fulfilled)
+      .addCase(forgotPassword.rejected, asyncHelpers.rejected);
 
     // Reset password
     builder
-      .addCase(resetPassword.pending, (state) => {
-        state.isLoading = true;
-        state.error = null;
-      })
-      .addCase(resetPassword.fulfilled, (state) => {
-        state.isLoading = false;
-        state.error = null;
-      })
-      .addCase(resetPassword.rejected, (state, action) => {
-        state.isLoading = false;
-        state.error = formatErrorMessage(action.error);
-      });
+      .addCase(resetPassword.pending, asyncHelpers.pending)
+      .addCase(resetPassword.fulfilled, asyncHelpers.fulfilled)
+      .addCase(resetPassword.rejected, asyncHelpers.rejected);
   },
 });
 

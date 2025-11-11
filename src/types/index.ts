@@ -196,19 +196,19 @@ export interface AccountValue {
 }
 
 export interface AccountValueCreate {
-  timestamp?: string; // Defaults to now if not provided
+  timestamp?: string | undefined; // Defaults to now if not provided
   balance: number;
-  cash_balance?: number;
+  cash_balance?: number | undefined;
 }
 
 export interface AccountValueUpdate {
-  timestamp?: string;
-  balance?: number;
-  cash_balance?: number;
+  timestamp?: string | undefined;
+  balance?: number | undefined;
+  cash_balance?: number | undefined;
 }
 
 // Holdings types
-export interface Holding {
+export interface Holding extends Record<string, unknown> {
   id: string;
   account_id: string;
   security_id: string;
@@ -224,20 +224,20 @@ export interface Holding {
 
 export interface HoldingCreate {
   security_id: string;
-  timestamp?: string; // Defaults to now if not provided
+  timestamp?: string | undefined; // Defaults to now if not provided
   shares: number;
   average_price_per_share: number;
 }
 
 export interface HoldingUpdate {
-  security_id?: string;
-  timestamp?: string;
-  shares?: number;
-  average_price_per_share?: number;
+  security_id?: string | undefined;
+  timestamp?: string | undefined;
+  shares?: number | undefined;
+  average_price_per_share?: number | undefined;
 }
 
 // Currency types
-export interface Currency {
+export interface Currency extends Record<string, unknown> {
   id: string;
   code: string;
   name: string;

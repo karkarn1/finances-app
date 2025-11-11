@@ -2,13 +2,12 @@
  * Forgot Password page component
  */
 
-import { FC, useState, FormEvent, useEffect } from 'react';
+import { FC, useState, useEffect } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import {
   Box,
   Card,
   CardContent,
-  TextField,
   Button,
   Typography,
   Alert,
@@ -16,13 +15,15 @@ import {
   Link,
   Container,
 } from '@mui/material';
-import { useAppDispatch, useAppSelector } from '@/hooks';
+import { useAppDispatch, useAppSelector, useZodForm } from '@/hooks';
 import {
   forgotPassword,
   selectIsLoading,
   selectError,
   clearError,
 } from '@/store/slices/authSlice';
+import { forgotPasswordSchema, type ForgotPasswordInput } from '@/schemas';
+import { FormTextField } from '@/components/Form';
 
 const ForgotPassword: FC = () => {
   const dispatch = useAppDispatch();
@@ -30,9 +31,14 @@ const ForgotPassword: FC = () => {
   const isLoading = useAppSelector(selectIsLoading);
   const error = useAppSelector(selectError);
 
-  const [email, setEmail] = useState('');
-  const [validationError, setValidationError] = useState('');
   const [success, setSuccess] = useState(false);
+
+  // Initialize form with Zod validation
+  const { control, handleSubmit, reset } = useZodForm(forgotPasswordSchema, {
+    defaultValues: {
+      email: '',
+    },
+  });
 
   // Clear errors when component unmounts
   useEffect(() => {
@@ -41,33 +47,15 @@ const ForgotPassword: FC = () => {
     };
   }, [dispatch]);
 
-  const validateEmail = (email: string): boolean => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
-
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setValidationError('');
+  const onSubmit = (data: ForgotPasswordInput) => {
     setSuccess(false);
 
-    // Validation
-    if (!email.trim()) {
-      setValidationError('Email is required');
-      return;
-    }
-
-    if (!validateEmail(email)) {
-      setValidationError('Please enter a valid email address');
-      return;
-    }
-
     // Dispatch forgot password action
-    void dispatch(forgotPassword(email)).then((result) => {
+    void dispatch(forgotPassword(data.email)).then((result) => {
       // Show success message
       if (forgotPassword.fulfilled.match(result)) {
         setSuccess(true);
-        setEmail('');
+        reset();
       }
     });
   };
@@ -111,19 +99,18 @@ const ForgotPassword: FC = () => {
               </Alert>
             )}
 
-            {(error || validationError) && !success && (
+            {error && !success && (
               <Alert severity="error" sx={{ mb: 3 }}>
-                {validationError || error}
+                {error}
               </Alert>
             )}
 
-            <Box component="form" onSubmit={handleSubmit} noValidate>
-              <TextField
-                fullWidth
+            <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate>
+              <FormTextField
+                name="email"
+                control={control}
                 label="Email"
                 type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
                 disabled={isLoading}
                 required
                 autoComplete="email"

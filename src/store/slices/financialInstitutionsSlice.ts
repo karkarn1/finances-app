@@ -5,21 +5,21 @@ import type {
   ApiError,
 } from '@/types';
 import type { RootState } from '@/store';
+import { createAsyncReducers, initialAsyncState } from '@/store/utils/asyncHelpers';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
 
 interface FinancialInstitutionsState {
   institutions: FinancialInstitution[];
   selectedInstitution: FinancialInstitution | null;
-  loading: boolean;
+  isLoading: boolean;
   error: string | null;
 }
 
 const initialState: FinancialInstitutionsState = {
   institutions: [],
   selectedInstitution: null,
-  loading: false,
-  error: null,
+  ...initialAsyncState,
 };
 
 // Helper function to get auth token
@@ -182,6 +182,9 @@ export const deleteFinancialInstitution = createAsyncThunk<
   }
 });
 
+// Create async helpers
+const asyncHelpers = createAsyncReducers<FinancialInstitutionsState>('financialInstitutions');
+
 // Slice
 const financialInstitutionsSlice = createSlice({
   name: 'financialInstitutions',
@@ -197,25 +200,16 @@ const financialInstitutionsSlice = createSlice({
   extraReducers: (builder) => {
     builder
       // Fetch all
-      .addCase(fetchFinancialInstitutions.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
+      .addCase(fetchFinancialInstitutions.pending, asyncHelpers.pending)
       .addCase(fetchFinancialInstitutions.fulfilled, (state, action) => {
-        state.loading = false;
+        asyncHelpers.fulfilled(state);
         state.institutions = action.payload;
       })
-      .addCase(fetchFinancialInstitutions.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload || 'Failed to fetch financial institutions';
-      })
+      .addCase(fetchFinancialInstitutions.rejected, asyncHelpers.rejected)
       // Fetch by ID
-      .addCase(fetchFinancialInstitutionById.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
+      .addCase(fetchFinancialInstitutionById.pending, asyncHelpers.pending)
       .addCase(fetchFinancialInstitutionById.fulfilled, (state, action) => {
-        state.loading = false;
+        asyncHelpers.fulfilled(state);
         state.selectedInstitution = action.payload;
         // Update in list if exists
         const index = state.institutions.findIndex((i) => i.id === action.payload.id);
@@ -225,30 +219,18 @@ const financialInstitutionsSlice = createSlice({
           state.institutions.push(action.payload);
         }
       })
-      .addCase(fetchFinancialInstitutionById.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload || 'Failed to fetch financial institution';
-      })
+      .addCase(fetchFinancialInstitutionById.rejected, asyncHelpers.rejected)
       // Create
-      .addCase(createFinancialInstitution.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
+      .addCase(createFinancialInstitution.pending, asyncHelpers.pending)
       .addCase(createFinancialInstitution.fulfilled, (state, action) => {
-        state.loading = false;
+        asyncHelpers.fulfilled(state);
         state.institutions.push(action.payload);
       })
-      .addCase(createFinancialInstitution.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload || 'Failed to create financial institution';
-      })
+      .addCase(createFinancialInstitution.rejected, asyncHelpers.rejected)
       // Update
-      .addCase(updateFinancialInstitution.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
+      .addCase(updateFinancialInstitution.pending, asyncHelpers.pending)
       .addCase(updateFinancialInstitution.fulfilled, (state, action) => {
-        state.loading = false;
+        asyncHelpers.fulfilled(state);
         const index = state.institutions.findIndex((i) => i.id === action.payload.id);
         if (index !== -1) {
           state.institutions[index] = action.payload;
@@ -257,26 +239,17 @@ const financialInstitutionsSlice = createSlice({
           state.selectedInstitution = action.payload;
         }
       })
-      .addCase(updateFinancialInstitution.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload || 'Failed to update financial institution';
-      })
+      .addCase(updateFinancialInstitution.rejected, asyncHelpers.rejected)
       // Delete
-      .addCase(deleteFinancialInstitution.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
+      .addCase(deleteFinancialInstitution.pending, asyncHelpers.pending)
       .addCase(deleteFinancialInstitution.fulfilled, (state, action) => {
-        state.loading = false;
+        asyncHelpers.fulfilled(state);
         state.institutions = state.institutions.filter((i) => i.id !== action.payload);
         if (state.selectedInstitution?.id === action.payload) {
           state.selectedInstitution = null;
         }
       })
-      .addCase(deleteFinancialInstitution.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload || 'Failed to delete financial institution';
-      });
+      .addCase(deleteFinancialInstitution.rejected, asyncHelpers.rejected);
   },
 });
 
@@ -286,7 +259,7 @@ export const { clearError, setSelectedInstitution } = financialInstitutionsSlice
 export const selectAllInstitutions = (state: RootState) => state.financialInstitutions.institutions;
 export const selectSelectedInstitution = (state: RootState) =>
   state.financialInstitutions.selectedInstitution;
-export const selectInstitutionsLoading = (state: RootState) => state.financialInstitutions.loading;
+export const selectInstitutionsLoading = (state: RootState) => state.financialInstitutions.isLoading;
 export const selectInstitutionsError = (state: RootState) => state.financialInstitutions.error;
 
 export default financialInstitutionsSlice.reducer;

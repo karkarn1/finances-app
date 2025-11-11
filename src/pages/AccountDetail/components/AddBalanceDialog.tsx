@@ -9,92 +9,91 @@ import {
   DialogContent,
   DialogActions,
   Button,
-  TextField,
   Box,
 } from '@mui/material';
-import type { AccountValueCreate, AccountDetailed } from '@/types';
+import { useZodForm } from '@/hooks';
+import { accountValueCreateSchema, type AccountValueCreateInput } from '@/schemas';
+import { FormTextField } from '@/components/Form';
+import type { AccountDetailed } from '@/types';
 
 interface AddBalanceDialogProps {
   open: boolean;
   isEditing: boolean;
   account: AccountDetailed;
-  formData: AccountValueCreate;
+  initialData?: AccountValueCreateInput;
   onClose: () => void;
-  onSubmit: () => void;
-  onChange: (data: AccountValueCreate) => void;
+  onSubmit: (data: AccountValueCreateInput) => void;
 }
 
 export const AddBalanceDialog: FC<AddBalanceDialogProps> = ({
   open,
   isEditing,
   account,
-  formData,
+  initialData,
   onClose,
   onSubmit,
-  onChange,
 }) => {
+  const { control, handleSubmit, reset } = useZodForm(accountValueCreateSchema, {
+    defaultValues: initialData || {
+      timestamp: new Date().toISOString().slice(0, 16),
+      balance: 0,
+      cash_balance: undefined,
+    },
+  });
+
+  const handleFormSubmit = (data: AccountValueCreateInput) => {
+    onSubmit(data);
+    reset();
+  };
+
+  const handleClose = () => {
+    reset();
+    onClose();
+  };
+
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
       <DialogTitle>{isEditing ? 'Edit Balance' : 'Add Balance'}</DialogTitle>
-      <DialogContent>
-        <Box sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {!isEditing && (
-            <TextField
-              label="Date"
-              type="datetime-local"
-              value={formData.timestamp || new Date().toISOString().slice(0, 16)}
-              onChange={(e) =>
-                onChange({
-                  ...formData,
-                  timestamp: e.target.value,
-                })
-              }
-              fullWidth
-              InputLabelProps={{ shrink: true }}
-            />
-          )}
-          <TextField
-            label="Balance"
-            type="number"
-            value={formData.balance}
-            onChange={(e) =>
-              onChange({
-                ...formData,
-                balance: parseFloat(e.target.value),
-              })
-            }
-            fullWidth
-            required
-            inputProps={{ step: 0.01 }}
-            data-testid="balance-input"
-          />
-          {account.is_investment_account && (
-            <TextField
-              label="Cash Balance"
+      <form onSubmit={handleSubmit(handleFormSubmit)}>
+        <DialogContent>
+          <Box sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {!isEditing && (
+              <FormTextField
+                name="timestamp"
+                control={control}
+                label="Date"
+                type="datetime-local"
+                InputLabelProps={{ shrink: true }}
+              />
+            )}
+            <FormTextField
+              name="balance"
+              control={control}
+              label="Balance"
               type="number"
-              value={formData.cash_balance || ''}
-              onChange={(e) => {
-                const newFormData = { ...formData };
-                if (e.target.value) {
-                  newFormData.cash_balance = parseFloat(e.target.value);
-                } else {
-                  delete newFormData.cash_balance;
-                }
-                onChange(newFormData);
-              }}
-              fullWidth
+              required
               inputProps={{ step: 0.01 }}
-              data-testid="cash-balance-input"
+              data-testid="balance-input"
             />
-          )}
-        </Box>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
-        <Button onClick={onSubmit} variant="contained" data-testid="submit-balance">
-          {isEditing ? 'Update' : 'Add'}
-        </Button>
-      </DialogActions>
+            {account.is_investment_account && (
+              <FormTextField
+                name="cash_balance"
+                control={control}
+                label="Cash Balance"
+                type="number"
+                inputProps={{ step: 0.01 }}
+                data-testid="cash-balance-input"
+              />
+            )}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleClose}>Cancel</Button>
+          <Button type="submit" variant="contained" data-testid="submit-balance">
+            {isEditing ? 'Update' : 'Add'}
+          </Button>
+        </DialogActions>
+      </form>
     </Dialog>
   );
 };

@@ -9,14 +9,6 @@ import {
   Container,
   Typography,
   Button,
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  CircularProgress,
   Alert,
   Chip,
   IconButton,
@@ -28,8 +20,7 @@ import {
   DialogContent,
   DialogActions,
   Snackbar,
-  TextField,
-  Checkbox,
+  CircularProgress,
 } from '@mui/material';
 import {
   Sync as SyncIcon,
@@ -38,7 +29,8 @@ import {
   Refresh as RefreshIcon,
   Add as AddIcon,
 } from '@mui/icons-material';
-import { useAppDispatch, useAppSelector } from '@/hooks';
+import { useAppDispatch, useAppSelector, useFormSubmit } from '@/hooks';
+import { errorService } from '@/services/errorService';
 import {
   fetchCurrencies,
   syncCurrencyRates,
@@ -50,7 +42,16 @@ import {
   clearError,
 } from '@/store/slices/currenciesSlice';
 import { formatDateShort } from '@/utils';
-import type { CurrencyCreate } from '@/types';
+import type { CurrencyCreate, Currency } from '@/types';
+import { DataTable, DataTableColumn } from '@/components';
+import { CurrencyFormDialog } from './components';
+
+interface CurrencyFormData {
+  code: string;
+  name: string;
+  symbol: string;
+  isActive: boolean;
+}
 
 const Currencies: FC = () => {
   const dispatch = useAppDispatch();
@@ -61,23 +62,30 @@ const Currencies: FC = () => {
   const syncStatus = useAppSelector(selectSyncStatus);
 
   const [showActiveOnly, setShowActiveOnly] = useState(true);
+  const [currencyDialogOpen, setCurrencyDialogOpen] = useState(false);
   const [syncDialogOpen, setSyncDialogOpen] = useState(false);
-  const [addCurrencyDialogOpen, setAddCurrencyDialogOpen] = useState(false);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>('success');
 
-  // Add currency form state
-  const [currencyCode, setCurrencyCode] = useState('');
-  const [currencyName, setCurrencyName] = useState('');
-  const [currencySymbol, setCurrencySymbol] = useState('');
-  const [currencyIsActive, setCurrencyIsActive] = useState(true);
-  const [isCreating, setIsCreating] = useState(false);
+  // Form submission with loading/error handling
+  const { handleSubmit: submitCurrency, isSubmitting } = useFormSubmit(
+    async (data: CurrencyFormData) => {
+      const currencyData: CurrencyCreate = {
+        code: data.code,
+        name: data.name,
+        symbol: data.symbol,
+        isActive: data.isActive,
+      };
 
-  // Form validation errors
-  const [codeError, setCodeError] = useState('');
-  const [nameError, setNameError] = useState('');
-  const [symbolError, setSymbolError] = useState('');
+      await dispatch(createCurrency(currencyData)).unwrap();
+      errorService.showSuccess(`Currency ${data.code} created successfully`);
+    },
+    () => {
+      setCurrencyDialogOpen(false);
+      void dispatch(fetchCurrencies(!showActiveOnly));
+    }
+  );
 
   useEffect(() => {
     void dispatch(fetchCurrencies(!showActiveOnly));
@@ -123,101 +131,57 @@ const Currencies: FC = () => {
     setSnackbarOpen(false);
   };
 
-  const handleOpenAddCurrencyDialog = () => {
-    setAddCurrencyDialogOpen(true);
-  };
-
-  const handleCloseAddCurrencyDialog = () => {
-    setAddCurrencyDialogOpen(false);
-    // Reset form
-    setCurrencyCode('');
-    setCurrencyName('');
-    setCurrencySymbol('');
-    setCurrencyIsActive(true);
-    setCodeError('');
-    setNameError('');
-    setSymbolError('');
-  };
-
-  const validateForm = (): boolean => {
-    let isValid = true;
-
-    // Validate code (3 uppercase letters)
-    const codePattern = /^[A-Z]{3}$/;
-    if (!currencyCode) {
-      setCodeError('Code is required');
-      isValid = false;
-    } else if (!codePattern.test(currencyCode)) {
-      setCodeError('Code must be exactly 3 uppercase letters');
-      isValid = false;
-    } else {
-      setCodeError('');
-    }
-
-    // Validate name
-    if (!currencyName || currencyName.trim().length === 0) {
-      setNameError('Name is required');
-      isValid = false;
-    } else if (currencyName.length > 100) {
-      setNameError('Name must be 100 characters or less');
-      isValid = false;
-    } else {
-      setNameError('');
-    }
-
-    // Validate symbol
-    if (!currencySymbol || currencySymbol.trim().length === 0) {
-      setSymbolError('Symbol is required');
-      isValid = false;
-    } else if (currencySymbol.length > 10) {
-      setSymbolError('Symbol must be 10 characters or less');
-      isValid = false;
-    } else {
-      setSymbolError('');
-    }
-
-    return isValid;
-  };
-
-  const handleCreateCurrency = async () => {
-    if (!validateForm()) {
-      return;
-    }
-
-    setIsCreating(true);
-
-    const currencyData: CurrencyCreate = {
-      code: currencyCode,
-      name: currencyName,
-      symbol: currencySymbol,
-      isActive: currencyIsActive,
-    };
-
-    try {
-      await dispatch(createCurrency(currencyData)).unwrap();
-      setSnackbarMessage(`Currency ${currencyCode} created successfully`);
-      setSnackbarSeverity('success');
-      setSnackbarOpen(true);
-      handleCloseAddCurrencyDialog();
-      // Refresh currencies list
-      void dispatch(fetchCurrencies(!showActiveOnly));
-    } catch (err) {
-      setSnackbarMessage(err as string);
-      setSnackbarSeverity('error');
-      setSnackbarOpen(true);
-    } finally {
-      setIsCreating(false);
-    }
-  };
-
   const filteredCurrencies = showActiveOnly
     ? currencies.filter((c) => c.isActive)
     : currencies;
 
   // Handle row click to navigate to currency detail
-  const handleRowClick = (currencyCode: string) => {
-    navigate(`/currencies/${currencyCode}`);
+  const handleRowClick = (currency: Currency) => {
+    navigate(`/currencies/${currency.code}`);
   };
+
+  // Define columns for DataTable
+  const currencyColumns: DataTableColumn<Currency>[] = [
+    {
+      label: 'Code',
+      render: (currency) => (
+        <Typography variant="body1" fontWeight="medium">
+          {currency.code}
+        </Typography>
+      ),
+    },
+    {
+      label: 'Name',
+      key: 'name',
+    },
+    {
+      label: 'Symbol',
+      render: (currency) => (
+        <Typography variant="body1" fontWeight="medium">
+          {currency.symbol}
+        </Typography>
+      ),
+    },
+    {
+      label: 'Status',
+      render: (currency) =>
+        currency.isActive ? (
+          <Chip
+            icon={<CheckCircleIcon />}
+            label="Active"
+            color="success"
+            size="small"
+          />
+        ) : (
+          <Chip icon={<CancelIcon />} label="Inactive" color="default" size="small" />
+        ),
+      align: 'center',
+    },
+    {
+      label: 'Last Updated',
+      render: (currency) => formatDateShort(currency.updatedAt),
+    },
+  ];
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
@@ -250,7 +214,7 @@ const Currencies: FC = () => {
           <Button
             variant="outlined"
             startIcon={<AddIcon />}
-            onClick={handleOpenAddCurrencyDialog}
+            onClick={() => setCurrencyDialogOpen(true)}
             data-testid="add-currency-button"
           >
             Add Currency
@@ -291,148 +255,26 @@ const Currencies: FC = () => {
         </Alert>
       )}
 
-      {loading && currencies.length === 0 ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
-          <CircularProgress />
-        </Box>
-      ) : filteredCurrencies.length === 0 ? (
-        <Paper sx={{ p: 4, textAlign: 'center' }}>
-          <Typography variant="h6" color="text.secondary" gutterBottom>
-            No currencies found
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            {showActiveOnly
-              ? 'No active currencies available. Try showing all currencies.'
-              : 'No currencies in the system.'}
-          </Typography>
-        </Paper>
-      ) : (
-        <TableContainer component={Paper}>
-          <Table data-testid="currencies-table">
-            <TableHead>
-              <TableRow>
-                <TableCell>Code</TableCell>
-                <TableCell>Name</TableCell>
-                <TableCell>Symbol</TableCell>
-                <TableCell align="center">Status</TableCell>
-                <TableCell>Last Updated</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {filteredCurrencies.map((currency) => (
-                <TableRow
-                  key={currency.id}
-                  hover
-                  onClick={() => handleRowClick(currency.code)}
-                  sx={{ cursor: 'pointer' }}
-                  data-testid={`currency-row-${currency.code}`}
-                >
-                  <TableCell>
-                    <Typography variant="body1" fontWeight="medium">
-                      {currency.code}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>{currency.name}</TableCell>
-                  <TableCell>
-                    <Typography variant="body1" fontWeight="medium">
-                      {currency.symbol}
-                    </Typography>
-                  </TableCell>
-                  <TableCell align="center">
-                    {currency.isActive ? (
-                      <Chip
-                        icon={<CheckCircleIcon />}
-                        label="Active"
-                        color="success"
-                        size="small"
-                      />
-                    ) : (
-                      <Chip
-                        icon={<CancelIcon />}
-                        label="Inactive"
-                        color="default"
-                        size="small"
-                      />
-                    )}
-                  </TableCell>
-                  <TableCell>{formatDateShort(currency.updatedAt)}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      )}
+      <DataTable<Currency>
+        data={filteredCurrencies}
+        columns={currencyColumns}
+        isLoading={loading && currencies.length === 0}
+        emptyMessage={
+          showActiveOnly
+            ? 'No active currencies available. Try showing all currencies.'
+            : 'No currencies in the system.'
+        }
+        onRowClick={handleRowClick}
+        getRowKey={(currency) => currency.id}
+      />
 
       {/* Add Currency Dialog */}
-      <Dialog
-        open={addCurrencyDialogOpen}
-        onClose={handleCloseAddCurrencyDialog}
-        maxWidth="sm"
-        fullWidth
-        data-testid="currency-dialog"
-      >
-        <DialogTitle>Add New Currency</DialogTitle>
-        <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
-            <TextField
-              label="Currency Code"
-              value={currencyCode}
-              onChange={(e) => setCurrencyCode(e.target.value.toUpperCase())}
-              error={!!codeError}
-              helperText={codeError || 'Enter 3-letter code (e.g., EUR, GBP, JPY)'}
-              inputProps={{ maxLength: 3 }}
-              data-testid="currency-code-input"
-              required
-              fullWidth
-            />
-            <TextField
-              label="Currency Name"
-              value={currencyName}
-              onChange={(e) => setCurrencyName(e.target.value)}
-              error={!!nameError}
-              helperText={nameError || 'Full name of the currency'}
-              inputProps={{ maxLength: 100 }}
-              data-testid="currency-name-input"
-              required
-              fullWidth
-            />
-            <TextField
-              label="Symbol"
-              value={currencySymbol}
-              onChange={(e) => setCurrencySymbol(e.target.value)}
-              error={!!symbolError}
-              helperText={symbolError || 'Currency symbol (e.g., €, £, ¥)'}
-              inputProps={{ maxLength: 10 }}
-              data-testid="currency-symbol-input"
-              required
-              fullWidth
-            />
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={currencyIsActive}
-                  onChange={(e) => setCurrencyIsActive(e.target.checked)}
-                  data-testid="currency-active-checkbox"
-                />
-              }
-              label="Active"
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseAddCurrencyDialog} disabled={isCreating}>
-            Cancel
-          </Button>
-          <Button
-            onClick={() => { void handleCreateCurrency(); }}
-            variant="contained"
-            disabled={isCreating}
-            data-testid="create-currency-button"
-          >
-            {isCreating ? 'Creating...' : 'Create Currency'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <CurrencyFormDialog
+        open={currencyDialogOpen}
+        onClose={() => setCurrencyDialogOpen(false)}
+        onSubmit={(data) => void submitCurrency(data)}
+        isSubmitting={isSubmitting}
+      />
 
       {/* Sync Rates Dialog */}
       <Dialog open={syncDialogOpen} onClose={handleCloseSyncDialog}>

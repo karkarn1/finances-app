@@ -2,13 +2,12 @@
  * Register page component
  */
 
-import { FC, useState, FormEvent, useEffect } from 'react';
+import { FC, useEffect } from 'react';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import {
   Box,
   Card,
   CardContent,
-  TextField,
   Button,
   Typography,
   Alert,
@@ -16,7 +15,7 @@ import {
   Link,
   Container,
 } from '@mui/material';
-import { useAppDispatch, useAppSelector } from '@/hooks';
+import { useAppDispatch, useAppSelector, useZodForm } from '@/hooks';
 import {
   registerUser,
   selectIsAuthenticated,
@@ -24,6 +23,8 @@ import {
   selectError,
   clearError,
 } from '@/store/slices/authSlice';
+import { registerSchema, type RegisterInput } from '@/schemas';
+import { FormTextField } from '@/components/Form';
 
 const Register: FC = () => {
   const navigate = useNavigate();
@@ -33,11 +34,15 @@ const Register: FC = () => {
   const isLoading = useAppSelector(selectIsLoading);
   const error = useAppSelector(selectError);
 
-  const [email, setEmail] = useState('');
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [validationError, setValidationError] = useState('');
+  // Initialize form with Zod validation
+  const { control, handleSubmit } = useZodForm(registerSchema, {
+    defaultValues: {
+      email: '',
+      username: '',
+      password: '',
+      confirmPassword: '',
+    },
+  });
 
   // Redirect to dashboard if already authenticated
   useEffect(() => {
@@ -53,55 +58,10 @@ const Register: FC = () => {
     };
   }, [dispatch]);
 
-  const validateEmail = (email: string): boolean => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
-
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setValidationError('');
-
-    // Validation
-    if (!email.trim()) {
-      setValidationError('Email is required');
-      return;
-    }
-
-    if (!validateEmail(email)) {
-      setValidationError('Please enter a valid email address');
-      return;
-    }
-
-    if (!username.trim()) {
-      setValidationError('Username is required');
-      return;
-    }
-
-    if (username.length < 3) {
-      setValidationError('Username must be at least 3 characters');
-      return;
-    }
-
-    if (!password) {
-      setValidationError('Password is required');
-      return;
-    }
-
-    if (password.length < 8) {
-      setValidationError('Password must be at least 8 characters');
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      setValidationError('Passwords do not match');
-      return;
-    }
-
-    // Dispatch register action
-    void dispatch(
-      registerUser({ email, username, password })
-    ).then((result) => {
+  const onSubmit = (data: RegisterInput) => {
+    // Dispatch register action (backend expects only email, username, password)
+    const { confirmPassword, ...registerData } = data;
+    void dispatch(registerUser(registerData)).then((result) => {
       // Navigate to dashboard on success
       if (registerUser.fulfilled.match(result)) {
         navigate('/dashboard');
@@ -141,19 +101,18 @@ const Register: FC = () => {
               Sign up to start managing your finances
             </Typography>
 
-            {(error || validationError) && (
+            {error && (
               <Alert severity="error" sx={{ mb: 3 }}>
-                {validationError || error}
+                {error}
               </Alert>
             )}
 
-            <Box component="form" onSubmit={handleSubmit} noValidate>
-              <TextField
-                fullWidth
+            <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate>
+              <FormTextField
+                name="email"
+                control={control}
                 label="Email"
                 type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
                 disabled={isLoading}
                 required
                 autoComplete="email"
@@ -161,38 +120,33 @@ const Register: FC = () => {
                 sx={{ mb: 2 }}
               />
 
-              <TextField
-                fullWidth
+              <FormTextField
+                name="username"
+                control={control}
                 label="Username"
                 type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
                 disabled={isLoading}
                 required
                 autoComplete="username"
-                helperText="At least 3 characters"
                 sx={{ mb: 2 }}
               />
 
-              <TextField
-                fullWidth
+              <FormTextField
+                name="password"
+                control={control}
                 label="Password"
                 type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
                 disabled={isLoading}
                 required
                 autoComplete="new-password"
-                helperText="At least 8 characters"
                 sx={{ mb: 2 }}
               />
 
-              <TextField
-                fullWidth
+              <FormTextField
+                name="confirmPassword"
+                control={control}
                 label="Confirm Password"
                 type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
                 disabled={isLoading}
                 required
                 autoComplete="new-password"

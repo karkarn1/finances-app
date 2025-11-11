@@ -4,7 +4,12 @@
 
 import type { ApiError } from '@/types';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
+/**
+ * API base URL from environment.
+ * In tests: Uses process.env.VITE_API_BASE_URL or default
+ * In browser: Vite replaces process.env.VITE_API_BASE_URL with the value from .env
+ */
+const API_BASE_URL = process.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
 
 /**
  * Custom error class for API errors

@@ -92,3 +92,9 @@ export function formatDateShort(date: Date | string): string {
     day: 'numeric',
   }).format(dateObj);
 }
+
+// Export logger utility
+export { logger } from './logger';
+
+// Export type guards
+export * from './typeGuards';

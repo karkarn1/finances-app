@@ -2,7 +2,7 @@
  * Financial Institutions Page - Manage financial institutions
  */
 
-import { FC, useState, useEffect } from 'react';
+import { FC, useEffect } from 'react';
 import {
   Box,
   Container,
@@ -22,7 +22,6 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  TextField,
   Tooltip,
 } from '@mui/material';
 import {
@@ -31,7 +30,7 @@ import {
   Delete as DeleteIcon,
   Link as LinkIcon,
 } from '@mui/icons-material';
-import { useAppDispatch, useAppSelector } from '@/hooks';
+import { useAppDispatch, useAppSelector, useDialog } from '@/hooks';
 import {
   fetchFinancialInstitutions,
   createFinancialInstitution,
@@ -43,6 +42,8 @@ import {
   clearError,
 } from '@/store/slices/financialInstitutionsSlice';
 import type { FinancialInstitution, FinancialInstitutionCreate } from '@/types';
+import { FinancialInstitutionFormDialog } from './components';
+import { logger } from '@/utils/logger';
 
 const FinancialInstitutions: FC = () => {
   const dispatch = useAppDispatch();
@@ -50,17 +51,11 @@ const FinancialInstitutions: FC = () => {
   const loading = useAppSelector(selectInstitutionsLoading);
   const error = useAppSelector(selectInstitutionsError);
 
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [editingInstitution, setEditingInstitution] = useState<FinancialInstitution | null>(null);
-  const [deletingInstitution, setDeletingInstitution] = useState<FinancialInstitution | null>(
-    null
-  );
-  const [formData, setFormData] = useState<FinancialInstitutionCreate>({
-    name: '',
-    url: '',
-  });
-  const [formErrors, setFormErrors] = useState<{ name?: string; url?: string }>({});
+  // Dialog management for add/edit institution
+  const institutionDialog = useDialog<FinancialInstitutionCreate>({ name: '', url: '' });
+
+  // Dialog management for delete confirmation
+  const deleteDialog = useDialog<FinancialInstitution | null>(null);
 
   useEffect(() => {
     void dispatch(fetchFinancialInstitutions());
@@ -78,96 +73,55 @@ const FinancialInstitutions: FC = () => {
 
   const handleOpenDialog = (institution?: FinancialInstitution) => {
     if (institution) {
-      setEditingInstitution(institution);
-      setFormData({
-        name: institution.name,
-        url: institution.url || '',
-      });
+      institutionDialog.openDialog(
+        {
+          name: institution.name,
+          url: institution.url || '',
+        },
+        institution.id
+      );
     } else {
-      setEditingInstitution(null);
-      setFormData({ name: '', url: '' });
+      institutionDialog.openDialog();
     }
-    setFormErrors({});
-    setDialogOpen(true);
   };
 
-  const handleCloseDialog = () => {
-    setDialogOpen(false);
-    setEditingInstitution(null);
-    setFormData({ name: '', url: '' });
-    setFormErrors({});
-  };
-
-  const validateForm = (): boolean => {
-    const errors: { name?: string; url?: string } = {};
-
-    if (!formData.name.trim()) {
-      errors.name = 'Name is required';
-      setFormErrors(errors);
-      return false;
-    }
-
-    if (formData.url && formData.url.trim()) {
-      try {
-        new URL(formData.url);
-      } catch {
-        errors.url = 'Invalid URL format';
-        setFormErrors(errors);
-        return false;
-      }
-    }
-
-    setFormErrors(errors);
-    return true;
-  };
-
-  const handleSubmit = async () => {
-    if (!validateForm()) {
-      return;
-    }
-
+  const handleSubmit = async (data: FinancialInstitutionCreate) => {
     const submitData: FinancialInstitutionCreate = {
-      name: formData.name.trim(),
-      ...(formData.url?.trim() && { url: formData.url.trim() }),
+      name: data.name.trim(),
+      ...(data.url?.trim() && { url: data.url.trim() }),
     };
 
     try {
-      if (editingInstitution) {
+      if (institutionDialog.isEditing && institutionDialog.editingId) {
         await dispatch(
           updateFinancialInstitution({
-            id: editingInstitution.id,
+            id: institutionDialog.editingId,
             data: submitData,
           })
         ).unwrap();
       } else {
         await dispatch(createFinancialInstitution(submitData)).unwrap();
       }
-      handleCloseDialog();
+      institutionDialog.closeDialog();
     } catch (err) {
       // Error handled by Redux state
-      console.error('Failed to save institution:', err);
+      logger.error('Failed to save institution:', err);
     }
   };
 
   const handleOpenDeleteDialog = (institution: FinancialInstitution) => {
-    setDeletingInstitution(institution);
-    setDeleteDialogOpen(true);
-  };
-
-  const handleCloseDeleteDialog = () => {
-    setDeleteDialogOpen(false);
-    setDeletingInstitution(null);
+    deleteDialog.openDialog(institution);
   };
 
   const handleDelete = async () => {
-    if (!deletingInstitution) return;
+    if (!deleteDialog.data) return;
 
     try {
-      await dispatch(deleteFinancialInstitution(deletingInstitution.id)).unwrap();
-      handleCloseDeleteDialog();
+      await dispatch(deleteFinancialInstitution(deleteDialog.data.id)).unwrap();
+      deleteDialog.closeDialog();
     } catch (err) {
       // Error handled by Redux state
-      console.error('Failed to delete institution:', err);
+      logger.error('Failed to delete institution:', err);
     }
   };
 
@@ -284,55 +238,27 @@ const FinancialInstitutions: FC = () => {
       )}
 
       {/* Add/Edit Dialog */}
-      <Dialog open={dialogOpen} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
-        <DialogTitle>
-          {editingInstitution ? 'Edit Institution' : 'Add Institution'}
-        </DialogTitle>
-        <DialogContent>
-          <Box sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <TextField
-              label="Institution Name"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              error={!!formErrors.name}
-              helperText={formErrors.name}
-              fullWidth
-              required
-              autoFocus
-              data-testid="institution-name-input"
-            />
-            <TextField
-              label="Website (optional)"
-              value={formData.url}
-              onChange={(e) => setFormData({ ...formData, url: e.target.value })}
-              error={!!formErrors.url}
-              helperText={formErrors.url || 'e.g., https://www.example.com'}
-              fullWidth
-              data-testid="institution-url-input"
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDialog}>Cancel</Button>
-          <Button onClick={handleSubmit} variant="contained" data-testid="submit-institution">
-            {editingInstitution ? 'Update' : 'Add'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <FinancialInstitutionFormDialog
+        open={institutionDialog.open}
+        onClose={institutionDialog.closeDialog}
+        onSubmit={(data) => void handleSubmit(data)}
+        initialData={institutionDialog.data}
+        isEditing={institutionDialog.isEditing}
+      />
 
       {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteDialogOpen} onClose={handleCloseDeleteDialog}>
+      <Dialog open={deleteDialog.open} onClose={deleteDialog.closeDialog}>
         <DialogTitle>Delete Institution?</DialogTitle>
         <DialogContent>
           <Typography>
-            Are you sure you want to delete &quot;{deletingInstitution?.name}&quot;? This action
+            Are you sure you want to delete &quot;{deleteDialog.data?.name}&quot;? This action
             cannot be undone.
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseDeleteDialog}>Cancel</Button>
+          <Button onClick={deleteDialog.closeDialog}>Cancel</Button>
           <Button
-            onClick={handleDelete}
+            onClick={() => void handleDelete()}
             color="error"
             variant="contained"
             data-testid="confirm-delete"

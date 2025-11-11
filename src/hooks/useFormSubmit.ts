@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { errorService } from '@/services/errorService';
 import { formatErrorMessage } from '@/utils/errorHandler';
+import { logger } from '@/utils/logger';
 
 /**
  * Reusable hook for handling form submission with loading and error states.
@@ -46,7 +47,7 @@ export const useFormSubmit = <T,>(
       const errorMessage = formatErrorMessage(err);
       setError(errorMessage);
       errorService.showError(err, 'Form submission');
-      console.error('Form submission error:', err);
+      logger.error('Form submission error:', err);
     } finally {
       setIsSubmitting(false);
     }

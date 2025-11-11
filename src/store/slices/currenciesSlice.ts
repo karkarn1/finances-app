@@ -7,6 +7,11 @@ import type {
   CurrencyCreate,
   CurrencyUpdate,
 } from '@/types';
+import {
+  createAsyncReducers,
+  createAsyncReducersWithKey,
+  initialAsyncState,
+} from '@/store/utils/asyncHelpers';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
 
@@ -44,10 +49,10 @@ interface CurrenciesState {
   currencies: Currency[];
   currentRates: CurrencyRatesResponse | null;
   selectedCurrency: string | null;
-  loading: boolean;
+  isLoading: boolean;
   error: string | null;
+  isSyncing: boolean;
   syncStatus: {
-    loading: boolean;
     lastSync: string | null;
   };
 }
@@ -56,10 +61,9 @@ const initialState: CurrenciesState = {
   currencies: [],
   currentRates: null,
   selectedCurrency: null,
-  loading: false,
-  error: null,
+  ...initialAsyncState,
+  isSyncing: false,
   syncStatus: {
-    loading: false,
     lastSync: null,
   },
 };
@@ -252,6 +256,10 @@ export const updateCurrency = createAsyncThunk<
   }
 });
 
+// Create async helpers
+const asyncHelpers = createAsyncReducers<CurrenciesState>('currencies');
+const syncHelpers = createAsyncReducersWithKey<CurrenciesState>('isSyncing');
+
 // Slice
 const currenciesSlice = createSlice({
   name: 'currencies',
@@ -267,73 +275,43 @@ const currenciesSlice = createSlice({
   extraReducers: (builder) => {
     builder
       // fetchCurrencies
-      .addCase(fetchCurrencies.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
+      .addCase(fetchCurrencies.pending, asyncHelpers.pending)
       .addCase(fetchCurrencies.fulfilled, (state, action) => {
-        state.loading = false;
+        asyncHelpers.fulfilled(state);
         state.currencies = action.payload;
       })
-      .addCase(fetchCurrencies.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload || 'Failed to fetch currencies';
-      })
+      .addCase(fetchCurrencies.rejected, asyncHelpers.rejected)
       // fetchCurrencyRates
-      .addCase(fetchCurrencyRates.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
+      .addCase(fetchCurrencyRates.pending, asyncHelpers.pending)
       .addCase(fetchCurrencyRates.fulfilled, (state, action) => {
-        state.loading = false;
+        asyncHelpers.fulfilled(state);
         state.currentRates = action.payload;
       })
-      .addCase(fetchCurrencyRates.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload || 'Failed to fetch currency rates';
-      })
+      .addCase(fetchCurrencyRates.rejected, asyncHelpers.rejected)
       // syncCurrencyRates
-      .addCase(syncCurrencyRates.pending, (state) => {
-        state.syncStatus.loading = true;
-        state.error = null;
-      })
+      .addCase(syncCurrencyRates.pending, syncHelpers.pending)
       .addCase(syncCurrencyRates.fulfilled, (state, action) => {
-        state.syncStatus.loading = false;
+        syncHelpers.fulfilled(state);
         state.syncStatus.lastSync = action.payload.date;
       })
-      .addCase(syncCurrencyRates.rejected, (state, action) => {
-        state.syncStatus.loading = false;
-        state.error = action.payload || 'Failed to sync currency rates';
-      })
+      .addCase(syncCurrencyRates.rejected, syncHelpers.rejected)
       // createCurrency
-      .addCase(createCurrency.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
+      .addCase(createCurrency.pending, asyncHelpers.pending)
       .addCase(createCurrency.fulfilled, (state, action) => {
-        state.loading = false;
+        asyncHelpers.fulfilled(state);
         state.currencies.push(action.payload);
       })
-      .addCase(createCurrency.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload || 'Failed to create currency';
-      })
+      .addCase(createCurrency.rejected, asyncHelpers.rejected)
       // updateCurrency
-      .addCase(updateCurrency.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
+      .addCase(updateCurrency.pending, asyncHelpers.pending)
       .addCase(updateCurrency.fulfilled, (state, action) => {
-        state.loading = false;
+        asyncHelpers.fulfilled(state);
         const index = state.currencies.findIndex((c) => c.code === action.payload.code);
         if (index !== -1) {
           state.currencies[index] = action.payload;
         }
       })
-      .addCase(updateCurrency.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload || 'Failed to update currency';
-      });
+      .addCase(updateCurrency.rejected, asyncHelpers.rejected);
   },
 });
 
@@ -349,13 +327,16 @@ export const selectActiveCurrencies = (state: RootState) =>
 export const selectCurrencyByCode = (code: string) => (state: RootState) =>
   state.currencies.currencies.find((c) => c.code === code);
 
-export const selectCurrenciesLoading = (state: RootState) => state.currencies.loading;
+export const selectCurrenciesLoading = (state: RootState) => state.currencies.isLoading;
 
 export const selectCurrenciesError = (state: RootState) => state.currencies.error;
 
 export const selectCurrentRates = (state: RootState) => state.currencies.currentRates;
 
-export const selectSyncStatus = (state: RootState) => state.currencies.syncStatus;
+export const selectSyncStatus = (state: RootState) => ({
+  loading: state.currencies.isSyncing,
+  lastSync: state.currencies.syncStatus.lastSync,
+});
 
 export const selectSelectedCurrency = (state: RootState) =>
   state.currencies.selectedCurrency;

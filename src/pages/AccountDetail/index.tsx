@@ -16,7 +16,7 @@ import {
   Button,
   Typography,
 } from '@mui/material';
-import { useAppDispatch, useAppSelector } from '@/hooks';
+import { useAppDispatch, useAppSelector, useDebounce, useDialog } from '@/hooks';
 import {
   fetchAccountById,
   createAccountValue,
@@ -46,6 +46,7 @@ import {
 } from './components';
 import { useAccountData } from './hooks/useAccountData';
 import { useChartData } from './hooks/useChartData';
+import { logger } from '@/utils/logger';
 
 const AccountDetail: FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -70,45 +71,37 @@ const AccountDetail: FC = () => {
   const securities = useAppSelector(selectSearchResults);
   const searchingSecurities = useAppSelector(selectIsSearching);
 
-  // Dialog states
-  const [valueDialogOpen, setValueDialogOpen] = useState(false);
-  const [holdingDialogOpen, setHoldingDialogOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [editingValue, setEditingValue] = useState<string | null>(null);
-  const [editingHolding, setEditingHolding] = useState<string | null>(null);
+  // Dialog management for balance values
+  const valueDialog = useDialog<AccountValueCreate>({ balance: 0 });
 
-  // Form data states
-  const [valueFormData, setValueFormData] = useState<AccountValueCreate>({
-    balance: 0,
-  });
-
-  const [holdingFormData, setHoldingFormData] = useState<HoldingCreate>({
+  // Dialog management for holdings
+  const holdingDialog = useDialog<HoldingCreate>({
     security_id: '',
     timestamp: new Date().toISOString(),
     shares: 0,
     average_price_per_share: 0,
   });
 
+  // Dialog management for delete confirmation
+  const deleteAccountDialog = useDialog<boolean>(false);
+
   const [selectedSecurity, setSelectedSecurity] = useState<Security | null>(null);
   const [securitySearchQuery, setSecuritySearchQuery] = useState('');
 
-  // Debounced security search
+  // Debounced security search using custom hook
+  const debouncedSecuritySearchQuery = useDebounce(securitySearchQuery, 300);
+
   useEffect(() => {
-    if (securitySearchQuery.trim().length >= 1) {
-      const timer = setTimeout(() => {
-        void dispatch(searchSecuritiesAsync(securitySearchQuery.trim()));
-      }, 300);
-      return () => clearTimeout(timer);
+    if (debouncedSecuritySearchQuery.trim().length >= 1) {
+      void dispatch(searchSecuritiesAsync(debouncedSecuritySearchQuery.trim()));
     }
-    return undefined;
-  }, [securitySearchQuery, dispatch]);
+  }, [debouncedSecuritySearchQuery, dispatch]);
 
   // Balance value dialog handlers
   const handleOpenValueDialog = (valueId?: string) => {
     if (valueId) {
       const value = accountValues.find((v) => v.id === valueId);
       if (value) {
-        setEditingValue(valueId);
         const newFormData: AccountValueCreate = {
           timestamp: value.timestamp,
           balance: value.balance,
@@ -116,51 +109,43 @@ const AccountDetail: FC = () => {
         if (value.cash_balance !== undefined && value.cash_balance !== null) {
           newFormData.cash_balance = value.cash_balance;
         }
-        setValueFormData(newFormData);
+        valueDialog.openDialog(newFormData, valueId);
       }
     } else {
-      setEditingValue(null);
       const newFormData: AccountValueCreate = {
         balance: account?.current_balance || 0,
       };
       if (account?.is_investment_account && account?.current_cash_balance !== undefined) {
         newFormData.cash_balance = account.current_cash_balance;
       }
-      setValueFormData(newFormData);
+      valueDialog.openDialog(newFormData);
     }
-    setValueDialogOpen(true);
-  };
-
-  const handleCloseValueDialog = () => {
-    setValueDialogOpen(false);
-    setEditingValue(null);
-    setValueFormData({ balance: 0 });
   };
 
   const handleSubmitValue = async () => {
     if (!id) return;
 
     try {
-      if (editingValue) {
+      if (valueDialog.isEditing && valueDialog.editingId) {
         await dispatch(
           updateAccountValue({
             accountId: id,
-            valueId: editingValue,
-            data: valueFormData,
+            valueId: valueDialog.editingId,
+            data: valueDialog.data,
           })
         ).unwrap();
       } else {
         await dispatch(
           createAccountValue({
             accountId: id,
-            data: valueFormData,
+            data: valueDialog.data,
           })
         ).unwrap();
       }
-      handleCloseValueDialog();
+      valueDialog.closeDialog();
       void dispatch(fetchAccountById(id));
     } catch (err) {
-      console.error('Failed to save account value:', err);
+      logger.error('Failed to save account value:', err);
     }
   };
 
@@ -170,7 +155,7 @@ const AccountDetail: FC = () => {
       await dispatch(deleteAccountValue({ accountId: id, valueId })).unwrap();
       void dispatch(fetchAccountById(id));
     } catch (err) {
-      console.error('Failed to delete account value:', err);
+      logger.error('Failed to delete account value:', err);
     }
   };
 
@@ -179,67 +164,51 @@ const AccountDetail: FC = () => {
     if (holdingId) {
       const holding = holdings.find((h) => h.id === holdingId);
       if (holding) {
-        setEditingHolding(holdingId);
-        setHoldingFormData({
-          security_id: holding.security_id,
-          timestamp: holding.timestamp,
-          shares: holding.shares,
-          average_price_per_share: holding.average_price_per_share,
-        });
+        holdingDialog.openDialog(
+          {
+            security_id: holding.security_id,
+            timestamp: holding.timestamp,
+            shares: holding.shares,
+            average_price_per_share: holding.average_price_per_share,
+          },
+          holdingId
+        );
         setSelectedSecurity(holding.security || null);
       }
     } else {
-      setEditingHolding(null);
-      setHoldingFormData({
-        security_id: '',
-        timestamp: new Date().toISOString(),
-        shares: 0,
-        average_price_per_share: 0,
-      });
+      holdingDialog.openDialog();
       setSelectedSecurity(null);
       setSecuritySearchQuery('');
     }
-    setHoldingDialogOpen(true);
-  };
-
-  const handleCloseHoldingDialog = () => {
-    setHoldingDialogOpen(false);
-    setEditingHolding(null);
-    setHoldingFormData({
-      security_id: '',
-      timestamp: new Date().toISOString(),
-      shares: 0,
-      average_price_per_share: 0,
-    });
-    setSelectedSecurity(null);
-    setSecuritySearchQuery('');
   };
 
   const handleSubmitHolding = async () => {
-    if (!id || !holdingFormData.security_id) return;
+    if (!id || !holdingDialog.data.security_id) return;
 
     try {
-      if (editingHolding) {
+      if (holdingDialog.isEditing && holdingDialog.editingId) {
         await dispatch(
           updateHolding({
             accountId: id,
-            holdingId: editingHolding,
-            data: holdingFormData,
+            holdingId: holdingDialog.editingId,
+            data: holdingDialog.data,
           })
         ).unwrap();
       } else {
         await dispatch(
           createHolding({
             accountId: id,
-            data: holdingFormData,
+            data: holdingDialog.data,
           })
         ).unwrap();
       }
-      handleCloseHoldingDialog();
+      holdingDialog.closeDialog();
+      setSelectedSecurity(null);
+      setSecuritySearchQuery('');
       void dispatch(fetchHoldings(id));
       void dispatch(fetchAccountById(id));
     } catch (err) {
-      console.error('Failed to save holding:', err);
+      logger.error('Failed to save holding:', err);
     }
   };
 
@@ -249,7 +218,7 @@ const AccountDetail: FC = () => {
       await dispatch(deleteHolding({ accountId: id, holdingId })).unwrap();
       void dispatch(fetchAccountById(id));
     } catch (err) {
-      console.error('Failed to delete holding:', err);
+      logger.error('Failed to delete holding:', err);
     }
   };
 
@@ -259,14 +228,14 @@ const AccountDetail: FC = () => {
       await dispatch(deleteAccount(id)).unwrap();
       navigate('/accounts');
     } catch (err) {
-      console.error('Failed to delete account:', err);
+      logger.error('Failed to delete account:', err);
     }
   };
 
   const handleSecuritySelect = (security: Security) => {
     setSelectedSecurity(security);
-    setHoldingFormData({
-      ...holdingFormData,
+    holdingDialog.updateData({
+      ...holdingDialog.data,
       security_id: security.in_database === false ? security.symbol : security.id,
     });
     setSecuritySearchQuery(security.symbol);
@@ -298,7 +267,7 @@ const AccountDetail: FC = () => {
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
       {/* Header */}
-      <AccountHeader account={account} onDelete={() => setDeleteDialogOpen(true)} />
+      <AccountHeader account={account} onDelete={() => deleteAccountDialog.openDialog(true)} />
 
       {/* Error Alert */}
       {(error || holdingsError) && (
@@ -335,33 +304,37 @@ const AccountDetail: FC = () => {
 
       {/* Add/Edit Balance Dialog */}
       <AddBalanceDialog
-        open={valueDialogOpen}
-        isEditing={!!editingValue}
+        open={valueDialog.open}
+        isEditing={valueDialog.isEditing}
         account={account}
-        formData={valueFormData}
-        onClose={handleCloseValueDialog}
-        onSubmit={() => void handleSubmitValue()}
-        onChange={setValueFormData}
+        initialData={valueDialog.data}
+        onClose={valueDialog.closeDialog}
+        onSubmit={(data) => {
+          valueDialog.updateData(data);
+          void handleSubmitValue();
+        }}
       />
 
       {/* Add/Edit Holding Dialog */}
       <AddHoldingDialog
-        open={holdingDialogOpen}
-        isEditing={!!editingHolding}
-        formData={holdingFormData}
+        open={holdingDialog.open}
+        isEditing={holdingDialog.isEditing}
+        initialData={holdingDialog.data}
         selectedSecurity={selectedSecurity}
         securitySearchQuery={securitySearchQuery}
         searchingSecurities={searchingSecurities}
         securities={securities}
-        onClose={handleCloseHoldingDialog}
-        onSubmit={() => void handleSubmitHolding()}
-        onChange={setHoldingFormData}
+        onClose={holdingDialog.closeDialog}
+        onSubmit={(data) => {
+          holdingDialog.updateData(data);
+          void handleSubmitHolding();
+        }}
         onSecuritySearchChange={setSecuritySearchQuery}
         onSecuritySelect={handleSecuritySelect}
       />
 
       {/* Delete Account Confirmation Dialog */}
-      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
+      <Dialog open={deleteAccountDialog.open} onClose={deleteAccountDialog.closeDialog}>
         <DialogTitle>Delete Account?</DialogTitle>
         <DialogContent>
           <Typography>
@@ -370,7 +343,7 @@ const AccountDetail: FC = () => {
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+          <Button onClick={deleteAccountDialog.closeDialog}>Cancel</Button>
           <Button onClick={() => void handleDeleteAccount()} color="error" variant="contained">
             Delete Account
           </Button>
